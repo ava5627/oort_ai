@@ -104,7 +104,7 @@ impl Missile for CruiserMissile {
         } else {
             turn_to(dp.angle());
         }
-        if dp.length() < 100.0 {
+        if dp.length() < 150.0 {
             explode();
         }
     }
