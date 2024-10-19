@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 cd $HOME/repos/oort3/
+if [ $# -eq 0 ]
+then
+    echo "Usage: test.sh [source_ai] <scenario_name>"
+    exit 1
+fi
+
 if [ $# -eq 1 ]
 then
     SOURCE_AI=~/repos/oort_ai/target/bundle_output.rs
@@ -13,8 +19,13 @@ else
 fi
 
 exec 5>&1;
-
-result=$(./target/debug/battle $SCENARIAO $SOURCE_AI shared/builtin_ai/src/tutorial/${SCENARIAO}_enemy.rs | tee /dev/fd/5)
+enemy=shared/builtin_ai/src/tutorial/${SCENARIAO}_enemy.rs
+if [ ! -f $enemy ]
+then
+    echo "Enemy AI not found: $enemy"
+    enemy="shared/builtin_ai/src/tutorial/${SCENARIAO}_initial.rs"
+fi
+result=$(./target/debug/battle $SCENARIAO $SOURCE_AI $enemy | tee /dev/fd/5)
 cd ~/repos/oort_ai/
 avg=$(echo $result | rg -o "Average time: (\d+.\d+)" -r '$1' | tr -d " ")
 TIMES=~/repos/oort_ai/best.txt

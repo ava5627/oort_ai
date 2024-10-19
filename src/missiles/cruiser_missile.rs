@@ -1,4 +1,3 @@
-
 use oort_api::prelude::*;
 use crate::{target::Target, utils::{turn_to, angle_at_distance}};
 use crate::missiles::Missile;
@@ -28,13 +27,13 @@ impl Missile for CruiserMissile {
                 (contact.position, contact.velocity)
             }
         } else if let Some(msg) = receive() {
-            debug!("received on 0 {:?}", msg);
+            debug!("received on {} {:?}", get_radio_channel(), msg);
             (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
         } else {
             let radio_channel = get_radio_channel();
             set_radio_channel((radio_channel + 1) % 8);
             debug!("radio_channel {:?}", radio_channel);
-            set_radar_heading(radar_heading() - radar_width());
+            set_radar_heading(radar_heading() + radar_width() * position().y.signum());
             set_radar_width(TAU / 4.0);
             turn_to(0.0);
             accelerate(vec2(200.0, 0.0));
@@ -48,7 +47,7 @@ impl Missile for CruiserMissile {
             debug!("Target behind cruiser");
             let radio_channel = get_radio_channel();
             set_radio_channel((radio_channel + 1) % 8);
-            set_radar_heading(radar_heading() + radar_width());
+            set_radar_heading(radar_heading() + radar_width() * position().y.signum());
             set_radar_width(TAU / 4.0);
             let accel = vec2(200.0, 0.0) * target_position.x.signum();
             accelerate(accel);

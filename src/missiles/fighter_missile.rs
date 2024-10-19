@@ -8,6 +8,18 @@ pub struct FighterMissile {
     target_velocity: Vec2,
     target_acceleration: Vec2,
 }
+
+fn find_target() -> Option<(Vec2, Vec2)> {
+    set_radar_heading(radar_heading() + radar_width());
+    set_radar_width(TAU / 4.0);
+    if let Some(msg) = receive() {
+        Some((vec2(msg[0], msg[1]), vec2(msg[2], msg[3])))
+    } else {
+        accelerate(vec2(100.0, 0.0).rotate(heading()));
+        None
+    }
+}
+
 impl Missile for FighterMissile {
     fn new() -> FighterMissile {
         set_radar_heading(PI);
@@ -19,29 +31,21 @@ impl Missile for FighterMissile {
     }
     fn tick(&mut self) {
         let (target_position, target_velocity) = if let Some(contact) = scan() {
-            if contact.class == Class::Missile {
-                set_radar_heading(radar_heading() + radar_width());
-                set_radar_width(TAU / 4.0);
-                if let Some(msg) = receive() {
-                    (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
-                } else {
-                    accelerate(vec2(100.0, 0.0).rotate(heading()));
-                    return;
-                }
-            } else {
+            debug!("contact {:?}", contact);
+            if contact.class != Class::Missile && contact.class != Class::Torpedo {
                 (contact.position, contact.velocity)
-            }
-        } else {
-            set_radar_heading(radar_heading() + radar_width());
-            set_radar_width(TAU / 4.0);
-            if let Some(msg) = receive() {
-                (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
+            } else if let Some(target) = find_target() {
+                target
             } else {
-                accelerate(vec2(100.0, 0.0).rotate(heading()));
                 return;
             }
+        } else if let Some(target) = find_target() {
+            target
+        } else {
+            return;
         };
-        set_radar_heading(target_position.angle_to(position()));
+        debug!("target_position {:?}", target_position);
+        set_radar_heading(position().angle_to(target_position));
         set_radar_width(angle_at_distance(
             position().distance(target_position),
             100.0,
@@ -54,6 +58,7 @@ impl Missile for FighterMissile {
             activate_ability(Ability::Boost);
         }
     }
+
     fn seek(&mut self) {
         let dp = self.target_position - position();
         let dv = self.target_velocity - velocity();
