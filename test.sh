@@ -17,14 +17,27 @@ else
     SCENARIAO_NAME=$2
     SCENARIAO=tutorial_$2
 fi
+SCENARIAO_PATH=shared/simulator/src/scenario
+SCENARIAO_AI_PATH=shared/builtin_ai/src
+
+if [ -f $SCENARIAO_PATH/$SCENARIAO.rs ]
+then
+    SCENARIAO_AI_PATH=$SCENARIAO_AI_PATH/tutorial
+    enemy=${SCENARIAO}_enemy.rs
+else
+    SCENARIAO=$SCENARIAO_NAME
+    enemy=shared/builtin_ai/src/empty.rs
+fi
 
 exec 5>&1;
-enemy=shared/builtin_ai/src/tutorial/${SCENARIAO}_enemy.rs
 if [ ! -f $enemy ]
 then
     echo "Enemy AI not found: $enemy"
-    enemy="shared/builtin_ai/src/tutorial/${SCENARIAO}_initial.rs"
+    enemy="shared/builtin_ai/src/empty.rs"
 fi
+echo "Scenario: $SCENARIAO"
+echo "Source AI: $SOURCE_AI"
+echo "Enemy AI: $enemy"
 result=$(./target/debug/battle $SCENARIAO $SOURCE_AI $enemy | tee /dev/fd/5)
 cd ~/repos/oort_ai/
 avg=$(echo $result | rg -o "Average time: (\d+.\d+)" -r '$1' | tr -d " ")
