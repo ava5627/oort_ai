@@ -22,9 +22,12 @@ pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
     sin_theta.asin()
 }
 pub fn draw_curve(points: &VecDeque<Vec2>, color: u32, closed: bool) {
-    for i in 1..points.len() {
-        draw_line(points[i - 1], points[i], color);
-    }
+    points.iter().fold(None, |prev, point| {
+        if let Some(prev) = prev {
+            draw_line(prev, *point, color);
+        }
+        Some(*point)
+    });
     if closed {
         draw_line(points[points.len() - 1], points[0], color);
     }

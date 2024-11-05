@@ -187,21 +187,20 @@ impl Ship {
             }
             t
         } else {
-            let mut max_v = -1e9;
-            let _furthest = 0.0;
-            let mut lowest_shots_fired = 1000;
-            let mut index = 0;
-            for t in 0..self.targets.len() {
-                let tgt = &self.targets[t];
-                if tgt.shots_fired < lowest_shots_fired {
-                    lowest_shots_fired = tgt.shots_fired;
-                    max_v = tgt.velocity.length();
-                    index = t;
-                } else if tgt.shots_fired == lowest_shots_fired && tgt.velocity.length() > max_v {
-                    max_v = tgt.velocity.length();
-                    index = t;
-                }
-            }
+            let index = self
+                .targets
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| {
+                    a.shots_fired.cmp(&b.shots_fired).then(
+                        a.velocity
+                            .partial_cmp(&b.velocity)
+                            .unwrap()
+                            .reverse(),
+                    )
+                })
+                .unwrap()
+                .0;
             self.current_target = Some(index);
             index
         };
