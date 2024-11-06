@@ -167,7 +167,7 @@ impl Missile {
             set_radar_heading(velocity().angle());
             set_radar_min_distance(0.0);
             set_radar_max_distance(50.0);
-            set_radar_width(TAU / 80.0);
+            set_radar_width(TAU / 120.0);
         }
     }
     pub fn seek(&mut self) {
