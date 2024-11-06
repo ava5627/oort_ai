@@ -77,11 +77,12 @@ impl Missile for FrigateMissile {
         let a = vec2(100.0, accel).rotate(los);
         let a = Vec2::angle_length(a.angle(), 400.0);
         accelerate(a);
-        turn_to_simple(a.angle());
-        if dp.length() < 500.0 {
+        if dp.length() > 500.0 {
+            turn_to_simple(a.angle());
+        } else {
             turn_to_simple(dp.angle());
         }
-        if dp.length() < 190.0 {
+        if dp.length() < 195.0 {
             explode();
         }
     }
