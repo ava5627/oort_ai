@@ -48,7 +48,7 @@ impl Missile for CruiserMissile {
         if class() != Class::Torpedo
             && target_position.y.signum() != position().y.signum()
             && target_position.y.abs() > 30.0
-            && position().x.abs() < 10.0
+            && position().x.abs() < 40.0
         {
             debug!("Target behind cruiser");
             let radio_channel = get_radio_channel();
@@ -85,7 +85,7 @@ impl Missile for CruiserMissile {
             ));
         }
         self.seek();
-        if angle_diff((target_position - position()).angle(), heading()).abs() < 2.0 {
+        if angle_diff((target_position - position()).angle(), heading()).abs() < PI / 4.0 {
             activate_ability(Ability::Boost);
             if self.boost_time.is_none() {
                 self.boost_time = Some(0);
@@ -111,14 +111,14 @@ impl Missile for CruiserMissile {
         let angle = ma.angle();
         let target_angle = a.angle();
         accelerate(a);
-        if dp.length() > 500.0 {
+        if dp.length() > 400.0 {
             missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
             turn_to(a.angle() + angle);
         } else {
             missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
             turn_to(dp.angle());
         }
-        if dp.length() < 200.0 {
+        if dp.length() < 100.0 {
             explode();
         }
     }
