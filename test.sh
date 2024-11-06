@@ -53,8 +53,8 @@ if (( $(echo "$avg $best" | awk '{print ($1 < $2)}') )); then
     echo "New best time: $avg"
     sed -i "s/$SCENARIAO: $best/$SCENARIAO: $avg/" $TIMES
     git add .
-    git commit -m "New best $SCENARIAO: $avg" > /dev/null
+    git commit -m "New best $SCENARIAO: $avg" &> /dev/null
     git tag "$SCENARIAO_NAME-$avg"
-    git push > /dev/null
-    git push --tags > /dev/null
+    git push &> /dev/null
+    git push --tags &> /dev/null
 fi
