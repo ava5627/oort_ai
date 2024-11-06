@@ -22,11 +22,10 @@ SCENARIAO_AI_PATH=shared/builtin_ai/src
 
 if [ -f $SCENARIAO_PATH/$SCENARIAO.rs ]
 then
-    SCENARIAO_AI_PATH=$SCENARIAO_AI_PATH/tutorial
-    enemy=${SCENARIAO}_enemy.rs
+    enemy=$SCENARIAO_AI_PATH/tutorial/${SCENARIAO}_enemy.rs
 else
     SCENARIAO=$SCENARIAO_NAME
-    enemy=shared/builtin_ai/src/empty.rs
+    enemy=$SCENARIAO_AI_PATH/empty.rs
 fi
 
 exec 5>&1;
@@ -54,6 +53,8 @@ if (( $(echo "$avg $best" | awk '{print ($1 < $2)}') )); then
     echo "New best time: $avg"
     sed -i "s/$SCENARIAO: $best/$SCENARIAO: $avg/" $TIMES
     git add .
-    git commit -m "New best $SCENARIAO: $avg"
+    git commit -m "New best $SCENARIAO: $avg" > /dev/null
     git tag "$SCENARIAO_NAME-$avg"
+    git push > /dev/null
+    git push --tags > /dev/null
 fi

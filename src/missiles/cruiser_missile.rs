@@ -1,5 +1,6 @@
 use oort_api::prelude::*;
-use crate::{target::Target, utils::{turn_to, angle_at_distance}};
+use crate::utils::{turn_to, angle_at_distance};
+use crate::target::Target;
 use crate::missiles::Missile;
 pub struct CruiserMissile {
     target: Option<Target>,

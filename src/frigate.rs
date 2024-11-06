@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
@@ -205,41 +207,41 @@ impl Frigate {
         if heuristic.0 == TargetHeuristic::Other {
             return free_targets[0];
         }
-        let mut target_index = 0;
-        let mut best_heuristic: Option<f64> = None;
-        for &i in free_targets {
-            let t = &self.targets[i];
-            if let Some(next_heuristic) = self.evaluate(t, best_heuristic, &heuristic) {
-                best_heuristic = Some(next_heuristic);
-                target_index = i;
-            }
-        }
-        target_index
+        *free_targets
+            .iter()
+            .min_by(|&&a, &&b| {
+                let a = &self.targets[a];
+                let b = &self.targets[b];
+                self.evaluate(a, b, &heuristic)
+            })
+            .unwrap()
     }
     fn evaluate(
         &self,
         target: &Target,
-        last_value: Option<f64>,
+        other: &Target,
         heuristic: &(TargetHeuristic, bool),
-    ) -> Option<f64> {
-        let value = match heuristic.0 {
+    ) -> Ordering {
+        let cmp = match heuristic.0 {
             TargetHeuristic::Angle => {
-                let angle = (target.position - position()).angle();
-                angle_diff(heading(), angle).abs()
+                let angle = angle_diff(heading(), (target.position - position()).angle()).abs();
+                let other_angle =
+                    angle_diff(heading(), (other.position - position()).angle()).abs();
+                angle.partial_cmp(&other_angle).unwrap()
             }
-            TargetHeuristic::Distance => (target.position - position()).length(),
+            TargetHeuristic::Distance => {
+                let distance = position().distance(target.position);
+                let other_distance = position().distance(other.position);
+                distance.partial_cmp(&other_distance).unwrap()
+            }
             TargetHeuristic::Other => {
-                return Some(0.0);
+                return Ordering::Equal;
             }
         };
-        if let Some(last_value) = last_value {
-            if heuristic.1 == (value < last_value) {
-                Some(value)
-            } else {
-                None
-            }
+        if heuristic.1 {
+            cmp
         } else {
-            Some(value)
+            cmp.reverse()
         }
     }
     fn lead_target(&mut self, target_index: usize, gun: usize) -> Vec2 {
