@@ -1,15 +1,20 @@
-use oort_api::prelude::*;
-use crate::utils::{turn_to, angle_at_distance};
-use crate::target::Target;
 use crate::missiles::Missile;
+use crate::target::Target;
+use crate::utils::{angle_at_distance, turn_to};
+use crate::vec_utils::VecUtils;
+use oort_api::prelude::*;
 pub struct CruiserMissile {
     target: Option<Target>,
+    boost_time: Option<usize>,
 }
 impl Missile for CruiserMissile {
     fn new() -> CruiserMissile {
         let radio_channel = id() % 8;
         set_radio_channel(radio_channel as usize);
-        CruiserMissile { target: None }
+        CruiserMissile {
+            target: None,
+            boost_time: None,
+        }
     }
     fn tick(&mut self) {
         debug!("id {:?}", id());
@@ -80,32 +85,82 @@ impl Missile for CruiserMissile {
             ));
         }
         self.seek();
-        if angle_diff((target_position - position()).angle(), heading()).abs() < 0.8 {
+        if angle_diff((target_position - position()).angle(), heading()).abs() < 2.0 {
             activate_ability(Ability::Boost);
+            if self.boost_time.is_none() {
+                self.boost_time = Some(0);
+            }
+        }
+        if let Some(boost_time) = self.boost_time {
+            self.boost_time = Some(boost_time + 1);
         }
     }
+
     fn seek(&mut self) {
         let target = self.target.as_ref().unwrap();
         let dp = target.position - position();
         let dv = target.velocity - velocity();
         let closing_speed = -(dp.y * dv.y - dp.x * dv.x).abs() / dp.length();
         let los = dp.angle();
-        let los_rate = (dp.y * dv.x - dp.x * dv.y) / dp.length().powf(2.0);
+        let los_rate = dv.wedge(dp) / dp.square_magnitude();
         const N: f64 = 4.0;
-        let nt = target.acceleration - (target.acceleration.dot(dp) / dp.length().powf(2.0)) * dp;
-        let accel = N * closing_speed * los_rate + N * nt.length() / 2.0 * los_rate;
+        let accel = N * closing_speed * los_rate; // + N * nt.length() / 2.0 * los_rate;
         let a = vec2(100.0, accel).rotate(los);
-        let a = vec2(400.0, 0.0).rotate(a.angle());
+        let a = Vec2::angle_length(a.angle(), 400.0);
+        let ma = self.max_acceleration();
+        let angle = ma.angle();
+        let target_angle = a.angle();
         accelerate(a);
-        debug!("dp {:?}", dp.length());
-        debug!("heading {:?}", heading());
-        if dp.length() > 400.0 {
-            turn_to(a.angle());
+        if dp.length() > 500.0 {
+            missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
+            turn_to(a.angle() + angle);
         } else {
+            missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
             turn_to(dp.angle());
         }
-        if dp.length() < 150.0 {
+        if dp.length() < 200.0 {
             explode();
         }
     }
+}
+
+impl CruiserMissile {
+    fn max_acceleration(&self) -> Vec2 {
+        if let Some(t) = self.boost_time {
+            if t < 120 {
+                vec2(
+                    max_forward_acceleration() + 100.0,
+                    max_lateral_acceleration(),
+                )
+            } else {
+                vec2(max_forward_acceleration(), max_lateral_acceleration())
+            }
+        } else {
+            vec2(
+                max_forward_acceleration() + 100.0,
+                max_lateral_acceleration(),
+            )
+        }
+    }
+}
+pub fn missile_accelerate(a: Vec2) {
+    let missile_frame = a.rotate(-heading());
+    let x;
+    let y;
+    if missile_frame.x < -max_backward_acceleration() {
+        x = 0.1;
+    } else if missile_frame.x > max_forward_acceleration() {
+        x = max_forward_acceleration();
+    } else {
+        x = missile_frame.x;
+    }
+    if missile_frame.y < -max_lateral_acceleration() {
+        y = -max_lateral_acceleration();
+    } else if missile_frame.y > max_lateral_acceleration() {
+        y = max_lateral_acceleration();
+    } else {
+        y = missile_frame.y;
+    }
+    let adjusted = vec2(x, y);
+    accelerate(adjusted.rotate(heading()));
 }

@@ -65,7 +65,7 @@ impl Missile for FrigateMissile {
             ));
         }
         self.seek();
-        if angle_diff((target_position - position()).angle(), heading()).abs() < 2.0 {
+        if angle_diff((target_position - position()).angle(), heading()).abs() < PI/4.0 {
             activate_ability(Ability::Boost);
             if self.boost_time.is_none() {
                 self.boost_time = Some(0);
