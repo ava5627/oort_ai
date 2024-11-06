@@ -163,6 +163,11 @@ impl Missile {
         if angle_diff((self.target_position - position()).angle(), heading()).abs() < 0.5 {
             activate_ability(Ability::Boost);
         }
+        if fuel() <= 0.0 {
+            set_radar_heading(velocity().angle());
+            set_radar_min_distance(0.0);
+            set_radar_max_distance(1000.0);
+        }
     }
     pub fn seek(&mut self) {
         let dp = self.target_position - position();
@@ -184,7 +189,7 @@ impl Missile {
         if dp.length() > 300.0 && fuel() > 0.0 {
             turn_to(a.angle());
         } else {
-            turn_to((dp - velocity()).angle());
+            turn_to(dp.angle());
         }
         if dp.length() < 100.0 {
             explode();
