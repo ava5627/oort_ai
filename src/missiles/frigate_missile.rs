@@ -95,7 +95,7 @@ impl Missile for FrigateMissile {
             turn_to_simple(a.angle() + angle);
         } else {
             missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
-            turn_to_simple(dp.angle());
+            turn_to(dp.angle());
         }
         if dp.length() < 195.0 {
             explode();
