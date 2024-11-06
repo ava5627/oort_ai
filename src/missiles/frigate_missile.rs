@@ -1,4 +1,4 @@
-use crate::missiles::Missile;
+use crate::missiles::{missile_accelerate, missile_max_acceleration, Missile};
 use crate::target::Target;
 use crate::utils::{angle_at_distance, turn_to_simple, turn_to};
 use crate::vec_utils::VecUtils;
@@ -86,7 +86,7 @@ impl Missile for FrigateMissile {
         let accel = N * closing_speed * los_rate; // + N * nt.length() / 2.0 * los_rate;
         let a = vec2(100.0, accel).rotate(los);
         let a = Vec2::angle_length(a.angle(), 400.0);
-        let ma = self.max_acceleration();
+        let ma = missile_max_acceleration(self.boost_time.map_or(false, |t| t < 120));
         let angle = ma.angle();
         let target_angle = a.angle();
         accelerate(a);
@@ -101,46 +101,4 @@ impl Missile for FrigateMissile {
             explode();
         }
     }
-}
-
-impl FrigateMissile {
-    fn max_acceleration(&self) -> Vec2 {
-        if let Some(t) = self.boost_time {
-            if t < 120 {
-                vec2(
-                    max_forward_acceleration() + 100.0,
-                    max_lateral_acceleration(),
-                )
-            } else {
-                vec2(max_forward_acceleration(), max_lateral_acceleration())
-            }
-        } else {
-            vec2(
-                max_forward_acceleration() + 100.0,
-                max_lateral_acceleration(),
-            )
-        }
-    }
-
-}
-pub fn missile_accelerate(a: Vec2) {
-    let missile_frame = a.rotate(-heading());
-    let x;
-    let y;
-    if missile_frame.x < -max_backward_acceleration() {
-        x = 0.1;
-    } else if missile_frame.x > max_forward_acceleration() {
-        x = max_forward_acceleration();
-    } else {
-        x = missile_frame.x;
-    }
-    if missile_frame.y < -max_lateral_acceleration() {
-        y = -max_lateral_acceleration();
-    } else if missile_frame.y > max_lateral_acceleration() {
-        y = max_lateral_acceleration();
-    } else {
-        y = missile_frame.y;
-    }
-    let adjusted = vec2(x, y);
-    accelerate(adjusted.rotate(heading()));
 }
