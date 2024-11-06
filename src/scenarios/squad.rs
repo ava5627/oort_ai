@@ -184,7 +184,7 @@ impl Missile {
         if dp.length() > 300.0 && fuel() > 0.0 {
             turn_to(a.angle());
         } else {
-            turn_to(dp.angle());
+            turn_to((dp - velocity()).angle());
         }
         if dp.length() < 100.0 {
             explode();
