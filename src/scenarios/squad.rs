@@ -98,8 +98,7 @@ impl Fighter {
                 );
                 draw_triangle(future_target + position(), 100.0, 0x00ff00);
                 let angle = future_target.angle();
-                let random_offset = rand(-1.0, 1.0) * TAU / 120.0;
-                turn_to(angle + random_offset);
+                turn_to(angle);
             } else {
                 let random_offset = rand(-1.0, 1.0) * TAU / 182.0;
                 turn_to(random_offset);
@@ -156,6 +155,7 @@ impl Missile {
             100.0,
         ));
         set_radar_min_distance(position().distance(target_position) - 100.0);
+        set_radar_max_distance(position().distance(target_position) + 100.0);
         self.target_acceleration = (target_velocity - self.target_velocity) / TICK_LENGTH;
         self.target_velocity = target_velocity;
         self.target_position = target_position;
@@ -181,12 +181,11 @@ impl Missile {
         let a = vec2(100.0, accel).rotate(los);
         let a = vec2(400.0, 0.0).rotate(a.angle());
         accelerate(a);
-        if dp.length() > 300.0 {
+        if dp.length() > 300.0 && fuel() > 0.0 {
             turn_to(a.angle());
         } else {
             turn_to(dp.angle());
         }
-        debug!("{}", velocity().length());
         if dp.length() < 100.0 {
             explode();
         }
