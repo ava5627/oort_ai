@@ -101,8 +101,7 @@ impl Fighter {
                 let random_offset = rand(-1.0, 1.0) * TAU / 120.0;
                 turn_to(angle + random_offset);
             } else {
-                lead_target(contact.position, contact.velocity, self.last_vel);
-                let random_offset = rand(-1.0, 1.0) * TAU / 180.0;
+                let random_offset = rand(-1.0, 1.0) * TAU / 182.0;
                 turn_to(random_offset);
                 accelerate(contact.position);
             }
