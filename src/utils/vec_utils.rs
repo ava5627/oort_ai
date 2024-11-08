@@ -17,7 +17,7 @@ impl VecUtils for Vec2 {
         vec2(magnitude, 0.0).rotate(angle)
     }
     fn square_magnitude(&self) -> f64 {
-        self.length().powi(2)
+        self.x * self.x + self.y * self.y
     }
     fn angle_to(&self, other: Self) -> f64 {
         (other - self).angle()

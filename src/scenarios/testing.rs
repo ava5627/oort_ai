@@ -1,4 +1,5 @@
-use crate::{utils::turn_to, vec_utils::VecUtils};
+use crate::utils::turn_to;
+use crate::utils::VecUtils;
 use oort_api::prelude::*;
 pub struct Test {
     time_boost: Option<usize>,
@@ -11,10 +12,13 @@ impl Default for Test {
 
 impl Test {
     pub fn new() -> Test {
-        debug!("spawn missile team 0 position (-100, 0) heading 0");
+        debug!("spawn missile team 0 position (-100, 0) heading 30");
         Test { time_boost: None }
     }
     pub fn tick(&mut self) {
+        debug!("max forward acceleration: {}", max_forward_acceleration());
+        debug!("max lateral acceleration: {}", max_lateral_acceleration());
+        debug!("max backward acceleration: {}", max_backward_acceleration());
         let max_accel = vec2(max_forward_acceleration(), max_lateral_acceleration());
         let max_boost_accel = max_accel + vec2(100.0, 0.0);
         let angle = max_accel.angle();

@@ -1,4 +1,4 @@
-use crate::{utils::angle_at_distance, vec_utils::VecUtils};
+use crate::utils::{angle_at_distance, VecUtils};
 use oort_api::prelude::*;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Target {
@@ -6,7 +6,6 @@ pub struct Target {
     pub velocity: Vec2,
     pub last_velocity: Vec2,
     pub acceleration: Vec2,
-    pub last_acceleration: Vec2,
     pub class: Class,
     pub shots_fired: u32,
     pub tick_updated: u32,
@@ -18,7 +17,6 @@ impl Target {
             velocity,
             last_velocity: velocity,
             acceleration: Vec2::zero(),
-            last_acceleration: Vec2::zero(),
             class,
             shots_fired: 0,
             tick_updated: current_tick(),
@@ -47,11 +45,13 @@ impl Target {
     }
     pub fn update(&mut self, new_position: Vec2, new_velocity: Vec2) {
         let dt = (current_tick() - self.tick_updated) as f64 * TICK_LENGTH;
+        if dt < 1e-3 {
+            return;
+        }
         self.position = new_position;
-        self.last_acceleration = self.acceleration;
+        self.last_velocity = self.velocity;
         self.velocity = new_velocity;
         self.acceleration = (new_velocity - self.last_velocity) / dt;
-        self.last_velocity = new_velocity;
         self.tick_updated = current_tick();
     }
     pub fn tick(&mut self) {

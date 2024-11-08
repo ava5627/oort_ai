@@ -9,3 +9,4 @@ tutorial_acceleration: 2.383
 tutorial_radar: 15.480
 tutorial_search: 14.047
 tutorial_guns: 2.350
+tutorial_deflection: 2.963

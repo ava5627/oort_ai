@@ -1,7 +1,7 @@
-use crate::missiles::{missile_accelerate, missile_max_acceleration, Missile};
+use crate::missiles::Missile;
 use crate::target::Target;
-use crate::utils::{angle_at_distance, turn_to_simple, turn_to};
-use crate::vec_utils::VecUtils;
+use crate::utils::{boost_max_acceleration, angle_at_distance, max_accelerate, turn_to, turn_to_simple};
+use crate::utils::VecUtils;
 use oort_api::prelude::*;
 
 fn find_target() -> Option<(Vec2, Vec2)> {
@@ -86,15 +86,15 @@ impl Missile for FrigateMissile {
         let accel = N * closing_speed * los_rate; // + N * nt.length() / 2.0 * los_rate;
         let a = vec2(100.0, accel).rotate(los);
         let a = Vec2::angle_length(a.angle(), 400.0);
-        let ma = missile_max_acceleration(self.boost_time.map_or(false, |t| t < 120));
+        let ma = boost_max_acceleration();
         let angle = ma.angle();
         let target_angle = a.angle();
         accelerate(a);
         if dp.length() > 500.0 {
-            missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
+            max_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
             turn_to_simple(a.angle() + angle);
         } else {
-            missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
+            max_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
             turn_to(dp.angle());
         }
         if dp.length() < 195.0 {

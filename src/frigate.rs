@@ -245,8 +245,7 @@ impl Frigate {
         }
     }
     fn lead_target(&mut self, target_index: usize, gun: usize) -> Vec2 {
-        let targets_len = self.targets.len() as f64;
-        let target = &mut self.targets[target_index];
+        let target = &self.targets[target_index];
         let bullet_speed = if gun == 0 {
             MAIN_BULLET_SPEED
         } else {
@@ -264,18 +263,14 @@ impl Frigate {
         let dp = target.position - p;
         let dv = target.velocity - velocity();
         let mut time_to_target = dp.length() / bullet_speed;
-        let jerk =
-            (target.acceleration - target.last_acceleration) / (TICK_LENGTH * (targets_len + 1.0));
         let mut future_position = dp
             + dv * time_to_target
-            + target.acceleration * time_to_target.powi(2) / 2.0
-            + jerk * time_to_target.powi(3) / 6.0;
+            + target.acceleration * time_to_target.powi(2) / 2.0;
         for _ in 0..100 {
             time_to_target = future_position.length() / bullet_speed;
             let new_future_position = dp
                 + dv * time_to_target
-                + target.acceleration * time_to_target.powi(2) / 2.0
-                + jerk * time_to_target.powi(3) / 6.0;
+                + target.acceleration * time_to_target.powi(2) / 2.0;
             let delta = new_future_position - future_position;
             future_position = new_future_position;
             if delta.length() < 1e-3 {

@@ -1,23 +1,12 @@
+use crate::missiles::Missile;
 use crate::utils::angle_at_distance;
 use crate::utils::turn_to_simple;
-use crate::vec_utils::VecUtils;
-use crate::missiles::Missile;
+use crate::utils::VecUtils;
 use oort_api::prelude::*;
 pub struct FighterMissile {
     target_position: Vec2,
     target_velocity: Vec2,
     target_acceleration: Vec2,
-}
-
-fn find_target() -> Option<(Vec2, Vec2)> {
-    set_radar_heading(radar_heading() + radar_width());
-    set_radar_width(TAU / 4.0);
-    if let Some(msg) = receive() {
-        Some((vec2(msg[0], msg[1]), vec2(msg[2], msg[3])))
-    } else {
-        accelerate(vec2(100.0, 0.0).rotate(heading()));
-        None
-    }
 }
 
 impl Missile for FighterMissile {
@@ -30,18 +19,17 @@ impl Missile for FighterMissile {
         }
     }
     fn tick(&mut self) {
-        let (target_position, target_velocity) = if let Some(contact) = scan() {
+        let (target_position, target_velocity) = if let Some(contact) =
+            scan().filter(|c| ![Class::Missile, Class::Torpedo].contains(&c.class))
+        {
             debug!("contact {:?}", contact);
-            if contact.class != Class::Missile && contact.class != Class::Torpedo {
-                (contact.position, contact.velocity)
-            } else if let Some(target) = find_target() {
-                target
-            } else {
-                return;
-            }
-        } else if let Some(target) = find_target() {
-            target
+            (contact.position, contact.velocity)
+        } else if let Some(msg) = receive() {
+            (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
         } else {
+            set_radar_heading(radar_heading() + radar_width());
+            set_radar_width(TAU / 4.0);
+            accelerate(vec2(100.0, 0.0).rotate(heading()));
             return;
         };
         debug!("target_position {:?}", target_position);

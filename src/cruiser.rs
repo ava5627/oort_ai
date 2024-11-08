@@ -1,7 +1,7 @@
 use crate::radar_state::RadarState;
 use crate::target::{Target, TentativeTarget};
 use crate::utils::{angle_at_distance, send_class_and_position};
-use crate::vec_utils::VecUtils;
+use crate::utils::VecUtils;
 use oort_api::prelude::*;
 const TURRET_BULLET_SPEED: f64 = 2000.0;
 #[derive(Debug, Clone, Copy, PartialEq)]

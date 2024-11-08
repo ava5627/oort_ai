@@ -24,8 +24,9 @@ impl Default for Ship {
 
 impl Ship {
     pub fn new() -> Ship {
-        if scenario_name() == "sandbox" {
-            return Ship::Special(Special::new());
+        match Special::new() {
+            Special::None => {}
+            special => return Ship::Special(special),
         }
         match class() {
             Class::Fighter => Ship::Fighter(Fighter::new()),
@@ -41,6 +42,7 @@ impl Ship {
         }
     }
     pub fn tick(&mut self) {
+        debug!("Scenario: {}", scenario_name());
         match self {
             Ship::Fighter(f) => f.tick(),
             Ship::FighterMissile(f) => f.tick(),

@@ -8,4 +8,3 @@ pub mod radar_state;
 pub mod ship;
 pub mod target;
 pub mod utils;
-pub mod vec_utils;
