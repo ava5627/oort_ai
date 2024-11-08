@@ -1,7 +1,10 @@
 use crate::missiles::Missile;
 use crate::target::Target;
-use crate::utils::{boost_max_acceleration, angle_at_distance, max_accelerate, turn_to, turn_to_simple};
+use crate::utils::angle_at_distance;
+use crate::utils::boost;
+use crate::utils::boost_max_acceleration;
 use crate::utils::VecUtils;
+use crate::utils::{max_accelerate, turn_to, turn_to_simple};
 use oort_api::prelude::*;
 
 fn find_target() -> Option<(Vec2, Vec2)> {
@@ -65,15 +68,10 @@ impl Missile for FrigateMissile {
             ));
         }
         self.seek();
-        if angle_diff((target_position - position()).angle(), heading()).abs() < PI/4.0 {
-            activate_ability(Ability::Boost);
-            if self.boost_time.is_none() {
-                self.boost_time = Some(0);
-            }
-        }
-        if let Some(boost_time) = self.boost_time {
-            self.boost_time = Some(boost_time + 1);
-        }
+        boost(
+            angle_diff((target_position - position()).angle(), heading()).abs() < PI / 4.0,
+            &mut self.boost_time,
+        );
     }
     fn seek(&mut self) {
         let target = self.target.as_ref().unwrap();

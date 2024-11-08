@@ -27,9 +27,14 @@ pub fn best_acceleration(target_heading: f64) -> Vec2 {
 
 pub fn max_accelerate(a: Vec2) {
     let body_frame = a.rotate(-heading());
+    let mb = if max_backward_acceleration() > 0.0 {
+        -max_backward_acceleration()
+    } else {
+        0.1
+    };
     let x = body_frame
         .x
-        .clamp(-max_backward_acceleration(), max_forward_acceleration());
+        .clamp(mb, max_forward_acceleration());
     let y = body_frame
         .y
         .clamp(-max_lateral_acceleration(), max_lateral_acceleration());

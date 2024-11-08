@@ -1,6 +1,6 @@
 use crate::missiles::Missile;
 use crate::target::Target;
-use crate::utils::{boost_max_acceleration, angle_at_distance, max_accelerate, turn_to};
+use crate::utils::{angle_at_distance, boost, boost_max_acceleration, max_accelerate, turn_to};
 use crate::utils::VecUtils;
 use oort_api::prelude::*;
 pub struct CruiserMissile {
@@ -85,14 +85,7 @@ impl Missile for CruiserMissile {
             ));
         }
         self.seek();
-        if angle_diff((target_position - position()).angle(), heading()).abs() < PI / 4.0
-            && self.boost_time.is_none()
-        {
-            activate_ability(Ability::Boost);
-            self.boost_time = Some(0);
-        } else if let Some(boost_time) = self.boost_time {
-            self.boost_time = Some(boost_time + 1);
-        }
+        boost(angle_diff((target_position - position()).angle(), heading()).abs() < PI / 4.0, &mut self.boost_time);
     }
 
     fn seek(&mut self) {
