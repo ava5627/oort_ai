@@ -68,7 +68,6 @@ pub fn gun_offsets(gun: usize) -> Vec2 {
             _ => vec2(0.0, 0.0),
         }
     } else {
-        debug!("{:?} does not have a gun", class());
         vec2(0.0, 0.0)
     }
 }
@@ -84,6 +83,8 @@ pub fn bullet_speeds(gun: usize) -> f64 {
         }
     } else if class() == Class::Cruiser {
         2000.0
+    } else if class() == Class::Missile {
+        3000.0
     } else {
         0.0
     }
