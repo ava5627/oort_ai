@@ -86,10 +86,9 @@ pub fn seek(target: &Target) {
 
 pub fn final_approach(target: &Target) {
     let dp = target.position - position();
-    // let ma = best_acceleration(dp.angle());
-    // let rand_dir = rand(-1.0, 1.0).signum();
-    // let ma = vec2(ma.x, -ma.y * rand_dir);
-    let ma = boost_max_acceleration() * vec2(1.0, -1.0);
+    let ma = best_acceleration(dp.angle());
+    let rand_dir = rand(-1.0, 1.0).signum();
+    let ma = vec2(ma.x, -ma.y * rand_dir);
     max_accelerate(ma.rotate(dp.angle()));
     turn_to(dp.angle());
 }

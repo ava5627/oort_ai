@@ -60,10 +60,12 @@ impl Missile for FrigateMissile {
         }
         if let Some(target) = &self.target {
             let dp = target.position - position();
-            if dp.length() > 500.0 {
+            if dp.length() > 600.0 {
                 seek(target);
             } else {
-                final_approach(target);
+                let ma = boost_max_acceleration();
+                max_accelerate(vec2(ma.x, -ma.y).rotate(dp.angle()));
+                turn_to(dp.angle());
             }
             if dp.length() < 195.0 {
                 explode();
