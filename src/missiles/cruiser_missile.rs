@@ -1,6 +1,8 @@
 use crate::missiles::Missile;
 use crate::target::Target;
-use crate::utils::{angle_at_distance, best_acceleration, boost, max_accelerate, seek, turn_to};
+use crate::utils::angle_at_distance;
+use crate::utils::final_approach;
+use crate::utils::{boost, seek, turn_to};
 use oort_api::prelude::*;
 pub struct CruiserMissile {
     target: Option<Target>,
@@ -32,7 +34,6 @@ impl Missile for CruiserMissile {
                 (contact.position, contact.velocity)
             }
         } else if let Some(msg) = receive() {
-            debug!("received on {} {:?}", get_radio_channel(), msg);
             (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
         } else {
             let radio_channel = get_radio_channel();
@@ -83,40 +84,21 @@ impl Missile for CruiserMissile {
                 Class::Missile,
             ));
         }
-        let dp = target_position - position();
         if let Some(target) = &self.target {
-            seek(target);
+            let dp = target.position - position();
+            if dp.length() > 500.0 {
+                seek(target);
+            } else {
+                final_approach(target);
+            }
+            if dp.length() < 120.0 {
+                explode();
+            }
+            let error = angle_diff(dp.angle(), heading()).abs();
+            let should_boost = error < PI / 4.0;
+            boost(should_boost, &mut self.boost_time);
         }
-        boost(
-            angle_diff(dp.angle(), heading()).abs() < PI / 4.0,
-            &mut self.boost_time,
-        );
     }
 
-    fn seek(&mut self) {
-        // let target = self.target.as_ref().unwrap();
-        // let dp = target.position - position();
-        // let dv = target.velocity - velocity();
-        // let closing_speed = -(dp.y * dv.y - dp.x * dv.x).abs() / dp.length();
-        // let los = dp.angle();
-        // let los_rate = dv.wedge(dp) / dp.square_magnitude();
-        // const N: f64 = 4.0;
-        // let accel = N * closing_speed * los_rate; // + N * nt.length() / 2.0 * los_rate;
-        // let a = vec2(100.0, accel).rotate(los);
-        // let a = Vec2::angle_length(a.angle(), 400.0);
-        // let ma = best_acceleration(a.angle());
-        // let angle = ma.angle();
-        // let target_angle = a.angle();
-        // accelerate(a);
-        // if dp.length() > 400.0 {
-        //     max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
-        //     turn_to(a.angle() + angle);
-        // } else {
-        //     max_accelerate(vec2(ma.x, -ma.y).rotate(dp.angle()));
-        //     turn_to(dp.angle());
-        // }
-        // if dp.length() < 100.0 {
-        //     explode();
-        // }
-    }
+    fn seek(&mut self) {}
 }

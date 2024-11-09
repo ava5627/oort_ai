@@ -77,22 +77,17 @@ pub fn seek(target: &Target) {
     let a = vec2(100.0, accel).rotate(los);
     let target_angle = a.angle();
 
-    if dp.length() > 500.0 {
-        debug!("far away using max acceleration");
-        let ma = best_acceleration(dp.angle());
-        let angle = ma.angle();
-        max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
-        turn_to(target_angle + angle);
-        draw_line(position(), position() + Vec2::angle_length(target_angle + angle, 100.0), 0xffff00);
-    } else {
-        debug!("close approach facing target");
-        let ma = best_acceleration(dp.angle());
-        let rand_dir = rand(-1.0, 1.0).signum();
-        let ma = vec2(ma.x, -ma.y * rand_dir);
-        max_accelerate(ma.rotate(dp.angle()));
-        turn_to(dp.angle());
-    }
-    if dp.length() < 100.0 {
-        explode();
-    }
+    let ma = best_acceleration(dp.angle());
+    let angle = ma.angle();
+    max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
+    turn_to(target_angle + angle);
+}
+
+pub fn final_approach(target: &Target) {
+    let dp = target.position - position();
+    let ma = best_acceleration(dp.angle());
+    let rand_dir = rand(-1.0, 1.0).signum();
+    let ma = vec2(ma.x, -ma.y * rand_dir);
+    max_accelerate(ma.rotate(dp.angle()));
+    turn_to(dp.angle());
 }
