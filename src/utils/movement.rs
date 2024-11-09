@@ -32,9 +32,7 @@ pub fn max_accelerate(a: Vec2) {
     } else {
         0.1
     };
-    let x = body_frame
-        .x
-        .clamp(mb, max_forward_acceleration());
+    let x = body_frame.x.clamp(mb, max_forward_acceleration());
     let y = body_frame
         .y
         .clamp(-max_lateral_acceleration(), max_lateral_acceleration());
@@ -66,7 +64,7 @@ pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
     sin_theta.asin()
 }
 
-pub fn seek(target: Target) {
+pub fn seek(target: &Target) {
     let dp = target.position - position();
     let dv = target.velocity - velocity();
     let closing_speed = -(dp.y * dv.y - dp.x * dv.x).abs() / dp.length();
@@ -79,6 +77,16 @@ pub fn seek(target: Target) {
 
     let ma = best_acceleration(target_angle);
     let angle = ma.angle();
-    max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
-    turn_to(target_angle + angle);
+    if dp.length() > 400.0 {
+        let ma = best_acceleration(dp.angle());
+        let angle = ma.angle();
+        max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
+        turn_to(a.angle() + angle);
+    } else {
+        max_accelerate(vec2(ma.x, -ma.y).rotate(dp.angle()));
+        turn_to(dp.angle());
+    }
+    if dp.length() < 100.0 {
+        explode();
+    }
 }
