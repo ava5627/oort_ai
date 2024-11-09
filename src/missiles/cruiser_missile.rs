@@ -91,7 +91,7 @@ impl Missile for CruiserMissile {
             } else {
                 final_approach(target);
             }
-            if dp.length() < 120.0 {
+            if dp.length() < 130.0 {
                 explode();
             }
             let error = angle_diff(dp.angle(), heading()).abs();
