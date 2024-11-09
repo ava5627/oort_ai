@@ -57,13 +57,6 @@ impl Cruiser {
             self.update_targets();
         }
         if !self.targets.is_empty() {
-            for i in 0..8 {
-                let index = i % self.targets.len();
-                let t = &self.targets[index];
-                select_radio(i);
-                set_radio_channel(i);
-                send([t.position.x, t.position.y, t.velocity.x, t.velocity.y]);
-            }
             let furthest_index = self
                 .targets
                 .iter()
@@ -76,6 +69,16 @@ impl Cruiser {
                 })
                 .unwrap_or((0, &self.targets[0]))
                 .0;
+            for i in 0..8 {
+                let mut index = i % self.targets.len();
+                if index == furthest_index && reload_ticks(0) < 100 {
+                    index = (index + 1) % self.targets.len();
+                }
+                let t = &self.targets[index];
+                select_radio(i);
+                set_radio_channel(i);
+                send([t.position.x, t.position.y, t.velocity.x, t.velocity.y]);
+            }
             let angle = self.lead_target(furthest_index, TURRET_BULLET_SPEED);
             aim(0, angle);
             fire(0);

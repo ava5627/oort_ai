@@ -8,8 +8,6 @@ pub use debug_utils::*;
 pub use movement::*;
 pub use vec_utils::VecUtils;
 
-use crate::target::Target;
-
 pub fn send_class_and_position() {
     let mut msg = vec![class() as u8];
     msg.extend_from_slice(&[0; 7]);
@@ -88,34 +86,5 @@ pub fn bullet_speeds(gun: usize) -> f64 {
         2000.0
     } else {
         0.0
-    }
-}
-
-pub fn lead_target(target: &Target, gun: usize) -> Vec2 {
-    let gun_offset = gun_offsets(gun);
-    let gun_position = position() - gun_offset.rotate(heading());
-    let dp = target.position - gun_position;
-    let dv = target.velocity - velocity();
-
-    let bullet_speed = bullet_speeds(gun);
-    let time_to_target = dp.length() / bullet_speed;
-
-    let mut future_position = dp
-        + dv * time_to_target
-        + target.acceleration * time_to_target.powi(2) / 2.0;
-    for _ in 0..100 {
-        let time_to_target = future_position.length() / bullet_speed;
-        let new_future_position = dp
-            + dv * time_to_target
-            + target.acceleration * time_to_target.powi(2) / 2.0;
-        if (future_position - new_future_position).length() < 1e-3 {
-            break;
-        }
-        future_position = new_future_position;
-    }
-    if future_position.x.is_nan() || future_position.y.is_nan() {
-        target.position
-    } else {
-        future_position
     }
 }

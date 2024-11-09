@@ -1,4 +1,4 @@
-use crate::{utils::angle_at_distance, utils::VecUtils};
+use crate::utils::{angle_at_distance, bullet_speeds, gun_offsets, VecUtils};
 use oort_api::prelude::*;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Target {
@@ -7,6 +7,7 @@ pub struct Target {
     pub last_velocity: Vec2,
     pub acceleration: Vec2,
     pub last_acceleration: Vec2,
+    pub jerk: Vec2,
     pub class: Class,
     pub shots_fired: u32,
     pub tick_updated: u32,
@@ -19,6 +20,7 @@ impl Target {
             last_velocity: velocity,
             acceleration: Vec2::zero(),
             last_acceleration: Vec2::zero(),
+            jerk: Vec2::zero(),
             class,
             shots_fired: 0,
             tick_updated: current_tick(),
@@ -48,10 +50,11 @@ impl Target {
     pub fn update(&mut self, new_position: Vec2, new_velocity: Vec2) {
         let dt = (current_tick() - self.tick_updated) as f64 * TICK_LENGTH;
         self.position = new_position;
-        self.last_acceleration = self.acceleration;
         self.velocity = new_velocity;
-        self.acceleration = (new_velocity - self.last_velocity) / dt;
-        self.last_velocity = new_velocity;
+        self.last_acceleration = self.acceleration;
+        self.acceleration = (self.velocity - self.last_velocity) / dt;
+        self.jerk = (self.acceleration - self.last_acceleration) / dt;
+        self.last_velocity = self.velocity; // set after because velocity is changed in the tick function but we don't know if thats actually accurate
         self.tick_updated = current_tick();
     }
     pub fn tick(&mut self) {
@@ -63,6 +66,33 @@ impl Target {
         set_radar_width(angle_at_distance(position().distance(self.position), 50.0));
         set_radar_max_distance((self.position - position()).length() + 20.0);
         set_radar_min_distance((self.position - position()).length() - 20.0);
+    }
+
+    pub fn lead(&self, gun: usize) -> Vec2 {
+        let gun_offset = gun_offsets(gun);
+        let gun_position = position() - gun_offset.rotate(heading());
+        let dp = self.position - gun_position;
+        let dv = self.velocity - velocity();
+
+        let bullet_speed = bullet_speeds(gun);
+
+        let mut future_position = dp;
+        for _ in 0..100 {
+            let time_to_target = future_position.length() / bullet_speed;
+            let new_future_position = dp
+                + dv * time_to_target
+                + self.acceleration * time_to_target.powi(2) / 2.0
+                + self.jerk * time_to_target.powi(3) / 6.0;
+            if (future_position - new_future_position).length() < 1e-3 {
+                break;
+            }
+            future_position = new_future_position;
+        }
+        if future_position.x.is_nan() || future_position.y.is_nan() {
+            self.position
+        } else {
+            future_position
+        }
     }
 }
 #[derive(Debug, PartialEq)]

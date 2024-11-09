@@ -4,8 +4,6 @@ use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
 use oort_api::prelude::*;
-const TURRET_BULLET_SPEED: f64 = 1000.0;
-const MAIN_BULLET_SPEED: f64 = 4000.0;
 #[derive(PartialEq)]
 enum TargetHeuristic {
     Angle,
@@ -156,8 +154,8 @@ impl Frigate {
                     free_targets.retain(|&x| x != t_index);
                 }
             }
-            let prediction = self.lead_target(t_index, weapon_idx);
             let target = &mut self.targets[t_index];
+            let prediction = target.lead(weapon_idx);
             let angle = prediction.angle();
             if weapon_idx == 0 {
                 debug!(
@@ -243,57 +241,5 @@ impl Frigate {
         } else {
             cmp.reverse()
         }
-    }
-    fn lead_target(&mut self, target_index: usize, gun: usize) -> Vec2 {
-        let targets_len = self.targets.len() as f64;
-        let target = &mut self.targets[target_index];
-        let bullet_speed = if gun == 0 {
-            MAIN_BULLET_SPEED
-        } else {
-            TURRET_BULLET_SPEED
-        };
-        let p = if gun == 1 {
-            position() - vec2(0.0, -30.0).rotate(heading())
-        } else if gun == 2 {
-            position() - vec2(0.0, 30.0).rotate(heading())
-        } else if gun == 0 {
-            position() - vec2(-40.0, 0.0).rotate(heading())
-        } else {
-            return vec2(0.0, 0.0);
-        };
-        let dp = target.position - p;
-        let dv = target.velocity - velocity();
-        let mut time_to_target = dp.length() / bullet_speed;
-        let jerk =
-            (target.acceleration - target.last_acceleration) / (TICK_LENGTH * (targets_len + 1.0));
-        let mut future_position = dp
-            + dv * time_to_target
-            + target.acceleration * time_to_target.powi(2) / 2.0
-            + jerk * time_to_target.powi(3) / 6.0;
-        for _ in 0..100 {
-            time_to_target = future_position.length() / bullet_speed;
-            let new_future_position = dp
-                + dv * time_to_target
-                + target.acceleration * time_to_target.powi(2) / 2.0
-                + jerk * time_to_target.powi(3) / 6.0;
-            let delta = new_future_position - future_position;
-            future_position = new_future_position;
-            if delta.length() < 1e-3 {
-                break;
-            }
-        }
-        let color = if gun == 0 {
-            let distance = future_position.length();
-            draw_line(p, vec2(distance, 0.0).rotate(heading()) + p, 0xffff00);
-            draw_triangle(vec2(distance, 0.0).rotate(heading()) + p, 10.0, 0xffff00);
-            0x00ffff
-        } else if gun == 1 {
-            0x00ff00
-        } else {
-            0xff0000
-        };
-        draw_polygon(future_position + p, 10.0, 4, 0.0, color);
-        draw_line(p, future_position + p, color);
-        future_position
     }
 }

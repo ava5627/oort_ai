@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use oort_api::prelude::*;
 
 use crate::target::Target;
-use crate::utils::{draw_curve, lead_target, turn_to, VecUtils};
+use crate::utils::{draw_curve, turn_to, VecUtils};
 pub struct Ship {
     target: Target,
     predictions: VecDeque<Vec2>,
@@ -19,7 +19,8 @@ impl Ship {
     }
     pub fn tick(&mut self) {
         self.target.update(target(), target_velocity());
-        let predicted_position = lead_target(&self.target, 0);
+        self.target.jerk = Vec2::zero();
+        let predicted_position = self.target.lead(0);
         self.predictions.push_back(predicted_position + position());
         if self.predictions.len() > 300 {
             self.predictions.pop_front();

@@ -1,7 +1,7 @@
 use oort_api::prelude::*;
 
 use crate::target::Target;
-use crate::utils::{lead_target, turn_to, VecUtils};
+use crate::utils::{turn_to, VecUtils};
 pub struct Ship {}
 impl Default for Ship {
     fn default() -> Self {
@@ -15,7 +15,7 @@ impl Ship {
     }
     pub fn tick(&mut self) {
         let target = Target::new(target(), target_velocity(), Class::Fighter);
-        let predicted_position = lead_target(&target, 0);
+        let predicted_position = target.lead(0);
         draw_triangle(predicted_position, 10.0, 0xff0000);
         draw_line(position(), predicted_position, 0xff0000);
         draw_line(
