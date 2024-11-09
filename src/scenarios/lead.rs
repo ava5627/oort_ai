@@ -26,7 +26,7 @@ impl Ship {
         let angle = predicted_position.angle();
         turn_to(angle);
         let miss_by = angle_diff(heading(), angle) * predicted_position.length();
-        if miss_by.abs() < 7.0 {
+        if miss_by.abs() < 14.0 {
             fire(0);
         }
     }
