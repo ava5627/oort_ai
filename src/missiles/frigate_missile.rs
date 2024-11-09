@@ -3,20 +3,11 @@ use crate::target::Target;
 use crate::utils::angle_at_distance;
 use crate::utils::boost;
 use crate::utils::boost_max_acceleration;
+use crate::utils::final_approach;
+use crate::utils::seek;
 use crate::utils::VecUtils;
 use crate::utils::{max_accelerate, turn_to, turn_to_simple};
 use oort_api::prelude::*;
-
-fn find_target() -> Option<(Vec2, Vec2)> {
-    set_radar_heading(radar_heading() + radar_width());
-    set_radar_width(TAU / 4.0);
-    if let Some(msg) = receive() {
-        Some((vec2(msg[0], msg[1]), vec2(msg[2], msg[3])))
-    } else {
-        accelerate(vec2(100.0, 0.0).rotate(heading()));
-        None
-    }
-}
 
 pub struct FrigateMissile {
     target: Option<Target>,
@@ -32,19 +23,19 @@ impl Missile for FrigateMissile {
         }
     }
     fn tick(&mut self) {
-        let (target_position, target_velocity) = if let Some(contact) = scan() {
-            if contact.class != Class::Missile {
+        let (target_position, target_velocity) =
+            if let Some(contact) = scan().filter(|c| c.class != Class::Missile) {
                 (contact.position, contact.velocity)
-            } else if let Some(target) = find_target() {
-                target
+            } else if let Some(msg) = receive() {
+                (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
             } else {
+                set_radar_heading(radar_heading() + radar_width());
+                set_radar_width(TAU / 4.0);
+                set_radar_max_distance(1e99);
+                set_radar_min_distance(0.0);
+                accelerate(vec2(100.0, 0.0).rotate(heading()));
                 return;
-            }
-        } else if let Some(target) = find_target() {
-            target
-        } else {
-            return;
-        };
+            };
         set_radar_heading(position().angle_to(target_position));
         set_radar_width(angle_at_distance(
             position().distance(target_position),
@@ -67,7 +58,17 @@ impl Missile for FrigateMissile {
                 Class::Missile,
             ));
         }
-        self.seek();
+        if let Some(target) = &self.target {
+            let dp = target.position - position();
+            if dp.length() > 500.0 {
+                seek(target);
+            } else {
+                final_approach(target);
+            }
+            if dp.length() < 195.0 {
+                explode();
+            }
+        }
         boost(
             angle_diff((target_position - position()).angle(), heading()).abs() < PI / 4.0,
             &mut self.boost_time,
