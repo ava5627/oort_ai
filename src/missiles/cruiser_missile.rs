@@ -20,29 +20,22 @@ impl Missile for CruiserMissile {
     fn tick(&mut self) {
         debug!("id {:?}", id());
         debug!("radio_channel {:?}", get_radio_channel());
-        let (target_position, target_velocity) = if let Some(contact) = scan() {
-            if contact.class == Class::Missile || contact.class == Class::Torpedo {
-                set_radar_heading(radar_heading() + contact.position.angle());
-                set_radar_width(TAU / 8.0);
-                if let Some(msg) = receive() {
-                    (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
-                } else {
-                    accelerate(vec2(100.0, 0.0).rotate(heading()));
-                    return;
-                }
-            } else {
-                (contact.position, contact.velocity)
-            }
+        let (target_position, target_velocity) = if let Some(contact) =
+            scan().filter(|c| ![Class::Missile, Class::Torpedo].contains(&c.class))
+        {
+            (contact.position, contact.velocity)
         } else if let Some(msg) = receive() {
             (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
         } else {
+            debug!("No contact");
             let radio_channel = get_radio_channel();
             set_radio_channel((radio_channel + 1) % 8);
-            debug!("radio_channel {:?}", radio_channel);
             set_radar_heading(radar_heading() + radar_width() * position().y.signum());
             set_radar_width(TAU / 4.0);
             turn_to(0.0);
             accelerate(vec2(200.0, 0.0));
+            set_radar_max_distance(10000.0);
+            set_radar_min_distance(0.0);
             return;
         };
         if class() != Class::Torpedo
@@ -58,6 +51,8 @@ impl Missile for CruiserMissile {
             let accel = vec2(200.0, 0.0) * target_position.x.signum();
             accelerate(accel);
             turn_to(accel.angle());
+            set_radar_max_distance(10000.0);
+            set_radar_min_distance(0.0);
             return;
         }
         set_radar_heading((target_position - position()).angle());
@@ -91,6 +86,9 @@ impl Missile for CruiserMissile {
             } else {
                 final_approach(target);
             }
+            let dv = target.velocity - velocity();
+            debug!("dp {:>8.3}", dp.length());
+            debug!("dv {:>8.3}", dv.length());
             if dp.length() < 130.0 {
                 explode();
             }
