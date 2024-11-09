@@ -75,12 +75,14 @@ pub fn seek(target: &Target) {
     let a = vec2(100.0, accel).rotate(los);
     let target_angle = a.angle();
 
-    let ma = best_acceleration(target_angle);
-    let angle = ma.angle();
     if dp.length() > 500.0 {
+        let ma = best_acceleration(dp.angle());
+        let angle = ma.angle();
         max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
         turn_to(a.angle() + angle);
     } else {
+        let ma = best_acceleration(target_angle);
+        let angle = ma.angle();
         max_accelerate(vec2(ma.x, -ma.y).rotate(dp.angle()));
         turn_to(dp.angle());
     }
