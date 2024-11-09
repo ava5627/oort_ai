@@ -1,4 +1,6 @@
 use oort_api::prelude::*;
+
+use crate::radar_state::RadarState;
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
@@ -16,41 +18,7 @@ impl TargetState {
         set_radar_min_distance((self.position - position()).length() - 20.0);
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct RadarState {
-    heading: f64,
-    width: f64,
-    min_distance: f64,
-    max_distance: f64,
-}
-impl Default for RadarState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
-impl RadarState {
-    pub fn new() -> RadarState {
-        RadarState {
-            heading: 330.0 * PI / 180.0,
-            width: TAU / 360.0,
-            min_distance: 0.0,
-            max_distance: 1e9,
-        }
-    }
-    fn save(&mut self) {
-        self.heading = radar_heading();
-        self.width = radar_width();
-        self.min_distance = radar_min_distance();
-        self.max_distance = radar_max_distance();
-    }
-    fn restore(&self) {
-        set_radar_heading(self.heading);
-        set_radar_width(self.width);
-        set_radar_min_distance(self.min_distance);
-        set_radar_max_distance(self.max_distance);
-    }
-}
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrigateRadarMode {
     FindNewTargets,

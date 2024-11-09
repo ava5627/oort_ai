@@ -89,3 +89,23 @@ pub fn bullet_speeds(gun: usize) -> f64 {
         0.0
     }
 }
+
+pub fn gun_color(gun: usize) -> u32 {
+    match gun {
+        0 => 0x00ffff,
+        1 => 0x00ff00,
+        2 => 0xff0000,
+        _ => 0xffffff,
+    }
+}
+
+pub fn class_max_acceleration(class: Class) -> f64 {
+    match class {
+            Class::Fighter => vec2(160.0, 30.).length(),
+            Class::Frigate => vec2(10.0, 5.0).length(),
+            Class::Missile => vec2(400.0, 100.0).length(),
+            Class::Cruiser => vec2(5.0, 2.5).length(),
+            Class::Torpedo => vec2(70.0, 20.0).length(),
+            _ => 0.0,
+    }
+}

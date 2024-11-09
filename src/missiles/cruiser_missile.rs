@@ -53,7 +53,7 @@ impl Missile for CruiserMissile {
         if let Some(target) = self
             .target
             .as_mut()
-            .filter(|t| t.sanity_check(target_position, target_velocity))
+            .filter(|t| t.sanity_check(target_position, target_velocity, Class::Missile))
         {
             target.update(target_position, target_velocity);
         } else {

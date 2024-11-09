@@ -84,9 +84,7 @@ impl Cruiser {
             fire(0);
         }
         for (i, t) in self.targets.iter_mut().enumerate() {
-            t.tick();
-            draw_polygon(t.position, 50.0, 8, 0.0, 0xffffff);
-            draw_text!(t.position, 0xffffff, "{:?}", i);
+            t.tick(i);
         }
     }
     fn find_targets(&mut self) {

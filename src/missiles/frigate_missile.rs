@@ -57,22 +57,20 @@ impl Missile for FrigateMissile {
                 Class::Missile,
             ));
         }
-        if let Some(target) = &self.target {
-            let dp = target.position - position();
-            if dp.length() > 600.0 {
-                seek(target);
-            } else {
-                let ma = boost_max_acceleration();
-                max_accelerate(vec2(ma.x, -ma.y).rotate(dp.angle()));
-                turn_to(dp.angle());
-            }
-            if dp.length() < 195.0 {
-                explode();
-            }
+        let target = self.target.as_ref().unwrap();
+        let dp = target.position - position();
+        if dp.length() > 600.0 {
+            seek(target);
+        } else {
+            let ma = boost_max_acceleration();
+            max_accelerate(vec2(ma.x, -ma.y).rotate(dp.angle()));
+            turn_to(dp.angle());
         }
-        boost(
-            angle_diff((target_position - position()).angle(), heading()).abs() < PI / 4.0,
-            &mut self.boost_time,
-        );
+        if dp.length() < 195.0 {
+            explode();
+        }
+        let error = angle_diff(dp.angle(), heading()).abs();
+        let should_boost = error < PI / 4.0;
+        boost(should_boost, &mut self.boost_time);
     }
 }

@@ -1,5 +1,6 @@
-use crate::utils::{angle_at_distance, bullet_speeds, gun_offsets, VecUtils};
+use crate::utils::{angle_at_distance, bullet_speeds, class_max_acceleration, gun_color, gun_offsets, VecUtils};
 use oort_api::prelude::*;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Target {
     pub position: Vec2,
@@ -12,6 +13,7 @@ pub struct Target {
     pub shots_fired: u32,
     pub tick_updated: u32,
 }
+
 impl Target {
     pub fn new(position: Vec2, velocity: Vec2, class: Class) -> Target {
         Target {
@@ -26,27 +28,23 @@ impl Target {
             tick_updated: current_tick(),
         }
     }
-    pub fn sanity_check(&self, new_position: Vec2, new_velocity: Vec2) -> bool {
-        let dt = (current_tick() - self.tick_updated) as f64 * TICK_LENGTH;
-        let acceleration = (new_velocity - self.last_velocity) / dt;
-        let max_acceleration = match self.class {
-            Class::Fighter => vec2(160.0, 30.).length(),
-            Class::Frigate => vec2(10.0, 5.0).length(),
-            Class::Missile => vec2(400.0, 100.0).length(),
-            Class::Cruiser => vec2(5.0, 2.5).length(),
-            Class::Torpedo => vec2(70.0, 20.0).length(),
-            _ => 0.0,
-        };
-        if acceleration.length() > max_acceleration {
-            debug!("Acceleration too high. Clamping.");
+
+    pub fn sanity_check(&self, new_position: Vec2, new_velocity: Vec2, new_class: Class) -> bool {
+        if self.class != new_class {
             return false;
         }
-        if (new_position - self.position).length() > new_velocity.length() * dt * 2.0 {
-            debug!("Position too far away. Clamping.");
+        let dt = (current_tick() - self.tick_updated) as f64 * TICK_LENGTH;
+        let acceleration = (new_velocity - self.last_velocity) / dt;
+        let max_acceleration = class_max_acceleration(new_class);
+        if acceleration.length() > max_acceleration {
+            return false;
+        }
+        if (new_position - self.position).length() > new_velocity.length() * dt * 4.0 {
             return false;
         }
         true
     }
+
     pub fn update(&mut self, new_position: Vec2, new_velocity: Vec2) {
         let dt = (current_tick() - self.tick_updated) as f64 * TICK_LENGTH;
         self.position = new_position;
@@ -54,13 +52,21 @@ impl Target {
         self.last_acceleration = self.acceleration;
         self.acceleration = (self.velocity - self.last_velocity) / dt;
         self.jerk = (self.acceleration - self.last_acceleration) / dt;
+        let ma = class_max_acceleration(self.class);
+        self.jerk.x = self.jerk.x.clamp(-ma, ma);
+        self.jerk.y = self.jerk.y.clamp(-ma, ma);
         self.last_velocity = self.velocity; // set after because velocity is changed in the tick function but we don't know if thats actually accurate
         self.tick_updated = current_tick();
     }
-    pub fn tick(&mut self) {
+
+    pub fn tick(&mut self, i: usize) {
         self.velocity += self.acceleration * TICK_LENGTH;
         self.position += self.velocity * TICK_LENGTH;
+        draw_polygon(self.position, 50.0, 8, 0.0, 0xffffff);
+        draw_square(self.position, 10.0, 0xffffff);
+        draw_text!(self.position, 0xffffff, "{}", i);
     }
+
     pub fn load_radar(&self) {
         set_radar_heading((self.position - position()).angle());
         set_radar_width(angle_at_distance(position().distance(self.position), 50.0));
@@ -88,13 +94,18 @@ impl Target {
             }
             future_position = new_future_position;
         }
-        if future_position.x.is_nan() || future_position.y.is_nan() {
+        if !future_position.x.is_normal() || !future_position.y.is_normal() {
+            debug!("Impossible to hit target");
             self.position
         } else {
+            let adjusted_position = future_position + gun_position;
+            draw_square(adjusted_position, 10.0, gun_color(gun));
+            draw_line(gun_position, adjusted_position, gun_color(gun));
             future_position
         }
     }
 }
+
 #[derive(Debug, PartialEq)]
 pub struct TentativeTarget {
     pub positions: Vec<Vec2>,

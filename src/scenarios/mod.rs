@@ -27,6 +27,7 @@ pub enum Special {
     Radio(radio::Ship),
     Missiles(missiles::Ship),
     Squad(squad::Ship),
+    Gunner(gunnery::Ship),
     None,
 }
 impl Default for Special {
@@ -51,6 +52,7 @@ impl Special {
             "tutorial_radio" => Special::Radio(radio::Ship::new()),
             "tutorial_missiles" => Special::Missiles(missiles::Ship::new()),
             "tutorial_squadron" => Special::Squad(squad::Ship::new()),
+            "gunnery" => Special::Gunner(gunnery::Ship::new()),
             _ => Special::None,
         }
     }
@@ -68,6 +70,7 @@ impl Special {
             Special::Radio(r) => r.tick(),
             Special::Missiles(r) => r.tick(),
             Special::Squad(r) => r.tick(),
+            Special::Gunner(r) => r.tick(),
             Special::None => {}
         }
     }

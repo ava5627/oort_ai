@@ -1,8 +1,8 @@
 use oort_api::prelude::*;
-
 use crate::target::Target;
 use crate::utils::{turn_to, VecUtils};
-pub struct Ship {}
+pub struct Ship {
+}
 impl Default for Ship {
     fn default() -> Self {
         Self::new()
@@ -11,7 +11,7 @@ impl Default for Ship {
 
 impl Ship {
     pub fn new() -> Ship {
-        Ship {}
+        Ship { }
     }
     pub fn tick(&mut self) {
         let target = Target::new(target(), target_velocity(), Class::Fighter);
@@ -25,7 +25,8 @@ impl Ship {
         );
         let angle = predicted_position.angle();
         turn_to(angle);
-        if angle_diff(heading(), angle).abs() < 0.01 {
+        let miss_by = angle_diff(heading(), angle) * predicted_position.length();
+        if miss_by.abs() < 7.0 {
             fire(0);
         }
     }

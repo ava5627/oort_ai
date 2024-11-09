@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
+use maths_rs::num::Cast;
 use oort_api::prelude::*;
 #[derive(PartialEq)]
 enum TargetHeuristic {
@@ -59,9 +60,7 @@ impl Frigate {
         }
         self.fire_turrets();
         for (i, t) in self.targets.iter_mut().enumerate() {
-            t.tick();
-            draw_polygon(t.position, 50.0, 8, 0.0, 0xffffff);
-            draw_text!(t.position, 0xffffff, "{:?}", i);
+            t.tick(i);
         }
     }
     fn find_targets(&mut self) {
@@ -93,14 +92,13 @@ impl Frigate {
                 return;
             }
             let target = &mut self.targets[self.index];
-            if !target.sanity_check(contact.position, contact.velocity) {
+            if !target.sanity_check(contact.position, contact.velocity, contact.class) {
                 debug!("target failed sanity check");
-                let new_target = self.targets.iter_mut().enumerate().min_by(|a, b| {
-                    a.1.position
-                        .distance(contact.position)
-                        .partial_cmp(&b.1.position.distance(contact.position))
-                        .unwrap()
-                });
+                let new_target = self
+                    .targets
+                    .iter_mut()
+                    .enumerate()
+                    .min_by_key(|a| a.1.position.distance(contact.position).as_i64());
                 if let Some((i, new_target)) = new_target {
                     if i != self.index {
                         debug!("switching to new target");
@@ -128,7 +126,7 @@ impl Frigate {
             return;
         }
         for t in &self.targets {
-            if t.class == new_class && t.position.distance(new_position) < 100.0 {
+            if t.sanity_check(new_position, new_velocity, new_class) {
                 return;
             }
         }
@@ -155,14 +153,14 @@ impl Frigate {
                 }
             }
             let target = &mut self.targets[t_index];
-            let prediction = target.lead(weapon_idx);
-            let angle = prediction.angle();
             if weapon_idx == 0 {
                 debug!(
                     "Main weapon targeting {}, reloded in {}",
                     t_index,
                     reload_ticks(weapon_idx)
                 );
+                let prediction = target.lead(weapon_idx);
+                let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
                 let applied_torque = self.pid.update(angle_diff(heading(), angle));
                 torque(applied_torque);
@@ -189,6 +187,8 @@ impl Frigate {
                     t_index,
                     reload_ticks(weapon_idx)
                 );
+                let prediction = target.lead(weapon_idx);
+                let angle = prediction.angle();
                 aim(weapon_idx, angle);
                 fire(weapon_idx);
             }
@@ -236,10 +236,9 @@ impl Frigate {
                 return Ordering::Equal;
             }
         };
-        if heuristic.1 {
-            cmp
-        } else {
-            cmp.reverse()
+        match heuristic.1 {
+            true => cmp,
+            false => cmp.reverse(),
         }
     }
 }
