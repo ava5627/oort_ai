@@ -1,21 +1,22 @@
 use crate::missiles::Missile;
+use crate::target::Target;
 use crate::utils::angle_at_distance;
-use crate::utils::turn_to_simple;
+use crate::utils::boost;
+use crate::utils::final_approach;
+use crate::utils::seek;
 use crate::utils::VecUtils;
 use oort_api::prelude::*;
 pub struct FighterMissile {
-    target_position: Vec2,
-    target_velocity: Vec2,
-    target_acceleration: Vec2,
+    target: Option<Target>,
+    boost_time: Option<usize>,
 }
 
 impl Missile for FighterMissile {
     fn new() -> FighterMissile {
         set_radar_heading(PI);
         FighterMissile {
-            target_position: Vec2::zero(),
-            target_velocity: Vec2::zero(),
-            target_acceleration: Vec2::zero(),
+            target: None,
+            boost_time: None,
         }
     }
     fn tick(&mut self) {
@@ -32,40 +33,30 @@ impl Missile for FighterMissile {
             accelerate(vec2(100.0, 0.0).rotate(heading()));
             return;
         };
+        if let Some(target) = &mut self.target {
+            target.update(target_position, target_velocity);
+        } else {
+            self.target = Some(Target::new(
+                target_position,
+                target_velocity,
+                Class::Missile,
+            ));
+        }
         debug!("target_position {:?}", target_position);
         set_radar_heading(position().angle_to(target_position));
         set_radar_width(angle_at_distance(
             position().distance(target_position),
             100.0,
         ));
-        self.target_acceleration = (target_velocity - self.target_velocity) / TICK_LENGTH;
-        self.target_velocity = target_velocity;
-        self.target_position = target_position;
-        self.seek();
-        if angle_diff((self.target_position - position()).angle(), heading()).abs() < 2.0 {
-            activate_ability(Ability::Boost);
+        let target = self.target.as_ref().unwrap();
+        let dp = target.position - position();
+        if dp.length() > 500.0 {
+            seek(target);
+        } else {
+            final_approach(target);
         }
-    }
-
-    fn seek(&mut self) {
-        let dp = self.target_position - position();
-        let dv = self.target_velocity - velocity();
-        let closing_speed = -(dp.y * dv.y - dp.x * dv.x).abs() / dp.length();
-        let los = dp.angle();
-        let los_rate = dv.wedge(dp) / dp.square_magnitude();
-        const N: f64 = 4.0;
-        let _nt = self.target_acceleration
-            - (self.target_acceleration.dot(dp) / dp.length().powf(2.0)) * dp;
-        let accel = N * closing_speed * los_rate; // + N * nt.length() / 2.0 * los_rate;
-        let a = vec2(100.0, accel).rotate(los);
-        let a = Vec2::angle_length(a.angle(), 400.0);
-        accelerate(a);
-        turn_to_simple(a.angle());
-        if dp.length() < 500.0 {
-            turn_to_simple(dp.angle());
-        }
-        if dp.length() < 180.0 {
-            explode();
-        }
+        let error = angle_diff(heading(), dp.angle());
+        let should_boost = error.abs() < 2.0;
+        boost(should_boost, &mut self.boost_time);
     }
 }

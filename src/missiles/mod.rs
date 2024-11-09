@@ -4,5 +4,4 @@ pub mod frigate_missile;
 pub trait Missile {
     fn new() -> Self;
     fn tick(&mut self);
-    fn seek(&mut self);
 }
