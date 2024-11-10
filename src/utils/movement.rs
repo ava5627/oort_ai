@@ -62,8 +62,8 @@ pub fn turn_to_simple(target_heading: f64) {
 }
 
 pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
-    let sin_theta = target_width / distance;
-    sin_theta.asin()
+    let sin_theta = target_width / distance / 2.0;
+    sin_theta.atan() * 2.0
 }
 
 pub fn seek(target: &Target) {
