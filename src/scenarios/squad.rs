@@ -100,7 +100,7 @@ impl Fighter {
                 let angle = future_target.angle();
                 turn_to(angle);
             } else {
-                let random_offset = rand(-1.0, 1.0) * TAU / 182.0;
+                let random_offset = rand(-1.0, 1.0) * TAU / 162.0;
                 turn_to(random_offset);
                 accelerate(contact.position);
             }
