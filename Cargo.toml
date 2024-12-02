@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-oort_api = "0.79.3"
+oort_api = "*"
 
 [build-dependencies]
 rustsourcebundler = { git = "https://github.com/lpenz/rust-sourcebundler", rev = "fbc017eeb3aa5c53ee5f6d15aff4d7f9d567430b" }

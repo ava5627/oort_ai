@@ -192,7 +192,7 @@ impl Missile {
         } else {
             turn_to(dp.angle());
         }
-        if dp.length() < 100.0 {
+        if dp.length() < 300.0 {
             explode();
         }
         debug!("{}", seed());

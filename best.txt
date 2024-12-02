@@ -12,3 +12,4 @@ tutorial_guns: 2.350
 tutorial_deflection: 2.963
 accelerate: 1000
 tutorial_acceleration2: 2.645
+cruiserk: 1000
