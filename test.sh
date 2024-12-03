@@ -40,16 +40,16 @@ echo "Enemy AI: $enemy"
 export RUST_LOG=error
 result=$(./target/debug/battle -j $SCENARIAO $SOURCE_AI $enemy)
 cd ~/repos/oort_ai/
-avg=$(echo $result | jq ".[0].average_time | .*1000 | floor /1000")
+avg=$(echo $result | jq ".[0].average_time")
 times=$(echo $result | jq '.[0].times | map(.*1000 | floor /1000 | if . < 10 then "0\(.|tostring)" else .|tostring end | (split(".") | .[1] | length) as $l | if $l < 3 then . + "0" * (3 - $l) else . end) | join(", ")' -r)
 echo "Times: $times"
-echo "Average time: $avg"
+printf "Average time: %.3f\n" $avg
 TIMES=~/repos/oort_ai/best.txt
 best=$(rg "$SCENARIAO: (\d+.\d+)" $TIMES -r '$1')
 if [ -z "$best" ]
 then
     best="1000"
-    echo "$SCENARIAO: $best" >> $TIMES
+    printf "$SCENARIAO: %.3f\n" $avg >> $TIMES
 else
     echo "Best time:    $best"
 fi
