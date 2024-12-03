@@ -59,7 +59,7 @@ impl Missile for FrigateMissile {
         }
         let target = self.target.as_ref().unwrap();
         let dp = target.position - position();
-        if dp.length() > 600.0 {
+        if dp.length() > 500.0 {
             seek(target);
         } else {
             let ma = boost_max_acceleration();

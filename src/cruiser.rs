@@ -87,6 +87,7 @@ impl Cruiser {
         }
     }
     fn find_targets(&mut self) {
+        self.scan_radar.restore();
         if let Some(contact) = scan() {
             debug!("contact snr {:?}", contact.snr);
             if contact.snr < 10.0 {
@@ -112,6 +113,7 @@ impl Cruiser {
         }
         set_radar_heading(radar_heading() + radar_width());
         set_radar_width(TAU / 10.0);
+        self.scan_radar.save();
     }
     fn update_targets(&mut self) {
         if self.targets.is_empty() {
