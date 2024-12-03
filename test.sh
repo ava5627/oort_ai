@@ -42,7 +42,7 @@ result=$(./target/debug/battle -j $SCENARIAO $SOURCE_AI $enemy)
 cd ~/repos/oort_ai/
 avg=$(echo $result | jq ".[0].average_time")
 avg=$(printf "%.3f" $avg)
-times=$(echo $result | jq '.[0].times | max as $m | map(.*1000 | round /1000 | if . < 10 and $m > 10 then "0\(.|tostring)" else .|tostring end | (split(".") | .[1] | length) as $l | if $l < 3 then . + "0" * (3 - $l) else . end) | join(", ")' -r)
+times=$(echo $result | jq '.[0].times | max as $m | map(.*1000 | round /1000 | if . < 10 and $m > 10 then "0\(.|tostring)" else .|tostring end | (split(".") | .[1] | length) as $l | if $l == 0 then . + ".000" elif $l < 3 then . + "0" * (3 - $l) else . end) | join(", ")' -r)
 echo "Times:        $times"
 printf "Average time: %.3f\n" $avg
 TIMES=~/repos/oort_ai/best.txt

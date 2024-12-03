@@ -57,6 +57,23 @@ impl Missile for FrigateMissile {
                 Class::Missile,
             ));
         }
+        let behind = self.target_behind_frigate(target_position);
+        if behind {
+            let diff = angle_diff(target_position.angle(), position().angle());
+            if diff > 0.0 {
+                turn_to(position().rotate(-PI / 2.0).angle());
+            } else {
+                turn_to(position().rotate(PI / 2.0).angle());
+            }
+            accelerate(vec2(100.0, 0.0).rotate(heading()));
+        } else {
+            self.seek_target();
+        }
+    }
+}
+
+impl FrigateMissile {
+    fn seek_target(&mut self) {
         let target = self.target.as_ref().unwrap();
         let dp = target.position - position();
         if dp.length() > 500.0 {
@@ -72,5 +89,12 @@ impl Missile for FrigateMissile {
         let error = angle_diff(dp.angle(), heading()).abs();
         let should_boost = error < PI / 4.0;
         boost(should_boost, &mut self.boost_time);
+    }
+
+    fn target_behind_frigate(&self, target_position: Vec2) -> bool {
+        let target_angle = target_position.angle();
+        let missile_angle = position().angle();
+        let diff = angle_diff(target_angle, missile_angle);
+        PI - diff.abs() < PI / 13.0
     }
 }
