@@ -75,7 +75,6 @@ impl Ship {
             set_radar_heading(radar_heading() + radar_width());
             set_radar_width(TAU / 4.0);
         }
-
     }
 }
 
@@ -203,22 +202,8 @@ impl Missile {
 
 pub fn missile_accelerate(a: Vec2) {
     let missile_frame = a.rotate(-heading());
-    let x;
-    let y;
-    if missile_frame.x < -max_backward_acceleration() {
-        x = 0.1;
-    } else if missile_frame.x > max_forward_acceleration() {
-        x = max_forward_acceleration();
-    } else {
-        x = missile_frame.x;
-    }
-    if missile_frame.y < -max_lateral_acceleration() {
-        y = -max_lateral_acceleration();
-    } else if missile_frame.y > max_lateral_acceleration() {
-        y = max_lateral_acceleration();
-    } else {
-        y = missile_frame.y;
-    }
+    let x = missile_frame.x.clamp(1e-10, max_forward_acceleration());
+    let y = missile_frame.y.clamp(-max_lateral_acceleration(), max_lateral_acceleration());
     let adjusted = vec2(x, y);
     accelerate(adjusted.rotate(heading()));
 }
@@ -241,4 +226,3 @@ fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
     let sin_theta = target_width / distance;
     sin_theta.asin()
 }
-

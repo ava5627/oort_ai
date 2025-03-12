@@ -51,9 +51,7 @@ impl Cruiser {
         debug!("port missile reload {:?}", reload_ticks(1));
         debug!("starboard missile reload {:?}", reload_ticks(2));
         debug!("torpedo reload {:?}", reload_ticks(3));
-        select_radar(0);
         self.update_targets();
-        select_radar(1);
         self.find_targets();
         if !self.targets.is_empty() {
             let furthest_index = self
@@ -87,6 +85,7 @@ impl Cruiser {
         }
     }
     fn find_targets(&mut self) {
+        select_radar(1);
         self.scan_radar.restore();
         if let Some(contact) = scan() {
             debug!("contact snr {:?}", contact.snr);
@@ -111,11 +110,15 @@ impl Cruiser {
             }
             self.new_target(contact.position, contact.velocity, contact.class);
         }
+        select_radar(1);
         set_radar_heading(radar_heading() + radar_width());
-        set_radar_width(TAU / 10.0);
+        set_radar_width(TAU / 20.0);
+        set_radar_max_distance(10000.0);
+        set_radar_min_distance(0.0);
         self.scan_radar.save();
     }
     fn update_targets(&mut self) {
+        select_radar(0);
         if self.targets.is_empty() {
             debug!("no targets");
             return;
@@ -133,7 +136,9 @@ impl Cruiser {
         } else {
             debug!("lost target: {:?}", self.index);
             self.targets.remove(self.index);
-            self.index -= 1;
+            if !self.targets.is_empty() {
+                self.index -= 1;
+            }
         }
         if !self.targets.is_empty() {
             self.index = (self.index + 1) % self.targets.len();

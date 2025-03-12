@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 cd $HOME/repos/oort3/
 if [ $# -eq 0 ]

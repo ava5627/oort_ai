@@ -10,7 +10,7 @@ impl RadarState {
     pub fn new() -> RadarState {
         RadarState {
             heading: 0.0,
-            width: TAU / 120.0,
+            width: radar_width(),
             min_distance: 0.0,
             max_distance: 1e99,
         }

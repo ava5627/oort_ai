@@ -35,8 +35,9 @@ impl Missile for CruiserMissile {
         if class() != Class::Torpedo
             && target_position.y.signum() != position().y.signum()
             && target_position.y.abs() > 30.0
-            && position().x.abs() < 40.0
+            && position().x.abs() < 100.0
         {
+            debug!("target behind cruiser");
             no_target();
             let accel = vec2(200.0, 0.0) * target_position.x.signum();
             accelerate(accel);
