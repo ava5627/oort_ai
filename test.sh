@@ -4,11 +4,11 @@ set -e
 cd $HOME/repos/oort3/
 if [ $# -eq 0 ]
 then
-    echo "Usage: test.sh [source_ai] <scenario_name>"
+    echo "Usage: test.sh [source_ai] <scenario_name> [-n]"
     exit 1
 fi
 
-if [ $# -eq 1 ]
+if [[ $# -eq 1 || $2 == "-n" ]]
 then
     SOURCE_AI=~/repos/oort_ai/target/bundle_output.rs
     SCENARIAO_NAME=$1
@@ -58,6 +58,10 @@ fi
 if (( $(echo "$avg $best" | awk '{print ($1 < $2)}') )); then
     echo "New best time: $avg"
     sed -i "s/$SCENARIAO: $best/$SCENARIAO: $avg/" $TIMES
+    if [[ ${!#} == "-n" ]]
+    then
+        exit 0
+    fi
     git add .
     git commit -m "New best $SCENARIAO: $avg" &> /dev/null
     git tag "$SCENARIAO_NAME-$avg"
