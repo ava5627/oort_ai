@@ -39,7 +39,21 @@ impl Missile for CruiserMissile {
         {
             debug!("target behind cruiser");
             no_target();
-            let accel = vec2(200.0, 0.0) * target_position.x.signum();
+            let accel = if let Some(target) = &self.target {
+                draw_line(
+                    position(),
+                    target.position,
+                    0xFF0000,
+                );
+                vec2(200.0, 0.0) * target.position.x.signum() + vec2(0.0, velocity().y.signum() * -max_lateral_acceleration())
+            } else {
+                self.target = Some(Target::new(
+                    target_position,
+                    target_velocity,
+                    Class::Missile,
+                ));
+                vec2(200.0, 0.0) * target_position.x.signum() + vec2(0.0, velocity().y.signum() * -max_lateral_acceleration())
+            };
             accelerate(accel);
             turn_to(accel.angle());
             return;
@@ -87,7 +101,7 @@ fn no_target() {
     let radio_channel = get_radio_channel();
     set_radio_channel((radio_channel + 1) % 8);
     set_radar_heading(radar_heading() + radar_width() * position().y.signum());
-    set_radar_width(TAU / 4.0);
+    set_radar_width(TAU / 10.0);
     set_radar_max_distance(10000.0);
     set_radar_min_distance(0.0);
 }
