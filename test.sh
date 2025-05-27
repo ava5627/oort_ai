@@ -33,7 +33,7 @@ exec 5>&1;
 if [ ! -f $enemy ]
 then
     echo "Enemy AI not found: $enemy"
-    enemy="shared/builtin_ai/src/empty.rs"
+    enemy="$SCENARIAO_AI_PATH/tutorial/tutorial_acceleration_initial.rs" # empty.rs stopped working for some reason
 fi
 echo "Scenario: $SCENARIAO"
 echo "Source AI: $SOURCE_AI"
@@ -57,11 +57,11 @@ else
 fi
 if (( $(echo "$avg $best" | awk '{print ($1 < $2)}') )); then
     echo "New best time: $avg"
-    sed -i "s/$SCENARIAO: $best/$SCENARIAO: $avg/" $TIMES
     if [[ ${!#} == "-n" ]]
     then
         exit 0
     fi
+    sed -i "s/$SCENARIAO: $best/$SCENARIAO: $avg/" $TIMES
     git add .
     git commit -m "New best $SCENARIAO: $avg" &> /dev/null
     git tag "$SCENARIAO_NAME-$avg"
