@@ -2,6 +2,7 @@ use oort_api::prelude::*;
 use crate::target::Target;
 use crate::utils::{turn_to, VecUtils};
 pub struct Ship {
+    target: Target,
 }
 impl Default for Ship {
     fn default() -> Self {
@@ -11,11 +12,14 @@ impl Default for Ship {
 
 impl Ship {
     pub fn new() -> Ship {
-        Ship { }
+        Ship {
+            target: Target::new(target(), target_velocity(), Class::Fighter),
+        }
     }
     pub fn tick(&mut self) {
-        let target = Target::new(target(), target_velocity(), Class::Fighter);
-        let predicted_position = target.lead(0);
+        self.target.update(target(), target_velocity());
+        self.target.tick(0);
+        let predicted_position = self.target.lead(0);
         draw_triangle(predicted_position, 10.0, 0xff0000);
         draw_line(position(), predicted_position, 0xff0000);
         draw_line(
@@ -26,7 +30,7 @@ impl Ship {
         let angle = predicted_position.angle();
         turn_to(angle);
         let miss_by = angle_diff(heading(), angle) * predicted_position.length();
-        if miss_by.abs() < 14.0 {
+        if miss_by.abs() < 15.0 {
             fire(0);
         }
     }

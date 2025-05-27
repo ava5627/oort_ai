@@ -38,7 +38,6 @@ impl Default for Special {
 
 impl Special {
     pub fn new() -> Special {
-        debug!("Scenario: {}", scenario_name());
         match scenario_name() {
             "sandbox" => Special::Test(Test::new()),
             "tutorial_guns" => Special::Gun(guns::Ship::new()),

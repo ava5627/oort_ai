@@ -42,7 +42,6 @@ impl Ship {
         }
     }
     pub fn tick(&mut self) {
-        debug!("Scenario: {}", scenario_name());
         match self {
             Ship::Fighter(f) => f.tick(),
             Ship::FighterMissile(f) => f.tick(),

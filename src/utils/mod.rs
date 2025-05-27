@@ -58,17 +58,15 @@ pub fn boost(cond: bool, boost_ticks: &mut Option<usize>) {
 }
 
 pub fn gun_offsets(gun: usize) -> Vec2 {
-    if class() == Class::Fighter || class() == Class::Cruiser {
-        vec2(0.0, 0.0)
-    } else if class() == Class::Frigate {
-        match gun {
+    match class() {
+        Class::Fighter => vec2(0.0, 0.0), // Should be -20, 0.0, but for some reason it works better with 0.0
+        Class::Frigate => match gun {
             0 => vec2(-40.0, 0.0),
             1 => vec2(0.0, -30.0),
             2 => vec2(0.0, 30.0),
             _ => vec2(0.0, 0.0),
-        }
-    } else {
-        vec2(0.0, 0.0)
+        },
+        _ => vec2(0.0, 0.0)
     }
 }
 

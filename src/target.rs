@@ -1,4 +1,9 @@
-use crate::utils::{angle_at_distance, bullet_speeds, class_max_acceleration, gun_color, gun_offsets, VecUtils};
+use crate::utils::angle_at_distance;
+use crate::utils::bullet_speeds;
+use crate::utils::class_max_acceleration;
+use crate::utils::gun_color;
+use crate::utils::gun_offsets;
+use crate::utils::VecUtils;
 use oort_api::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
