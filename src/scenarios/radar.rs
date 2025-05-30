@@ -9,23 +9,45 @@
 // tournament results.
 use oort_api::prelude::*;
 
-const BULLET_SPEED: f64 = 1000.0; // m/s
-
-pub struct Ship {}
+use crate::utils::VecUtils;
+use crate::utils::turn_to;
+use crate::utils::turn_to_simple;
+use crate::target::Target;
+pub struct Ship {
+    target: Option<Target>,
+}
 
 impl Ship {
     pub fn new() -> Ship {
-        Ship {}
+        Ship { target: None }
     }
 
     pub fn tick(&mut self) {
         if let Some(contact) = scan() {
-            accelerate(0.1 * (contact.position - position() - velocity()));
-            turn_to(lead_target(contact.position, contact.velocity));
-            fire(0);
-            set_radar_heading((contact.position - position()).angle());
+            if let Some(target) = &mut self.target {
+                target.update(contact.position, contact.velocity);
+            } else {
+                self.target = Some(Target::new(contact.position, contact.velocity, contact.class));
+            }
         } else {
             set_radar_heading(radar_heading() + radar_width());
+            set_radar_max_distance(1e100);
+            set_radar_min_distance(0.0);
+        }
+        if let Some(target) = &self.target {
+            let prediction = target.lead(0);
+            let angle = prediction.angle();
+            turn_to(angle);
+            // turn_to_simple(angle);
+            let miss_by = angle_diff(angle, heading()) * prediction.length();
+            if miss_by.abs() < 20.0 {
+                fire(0);
+            }
+            accelerate(Vec2::angle_length(angle, max_forward_acceleration()));
+        } else {
+            set_radar_heading(heading());
+            set_radar_max_distance(1000.0);
+            set_radar_min_distance(0.0);
         }
     }
 }
@@ -36,14 +58,3 @@ impl Default for Ship {
     }
 }
 
-fn turn_to(target_heading: f64) {
-    let heading_error = angle_diff(heading(), target_heading);
-    turn(10.0 * heading_error);
-}
-
-fn lead_target(target_position: Vec2, target_velocity: Vec2) -> f64 {
-    let dp = target_position - position();
-    let dv = target_velocity - velocity();
-    let predicted_dp = dp + dv * dp.length() / BULLET_SPEED;
-    predicted_dp.angle()
-}

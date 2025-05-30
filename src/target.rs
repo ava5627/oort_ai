@@ -117,3 +117,43 @@ pub struct TentativeTarget {
     pub average_position: Vec2,
     pub class: Class,
 }
+
+impl Default for TentativeTarget {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TentativeTarget {
+    pub fn new() -> TentativeTarget {
+        TentativeTarget {
+            positions: Vec::new(),
+            average_position: Vec2::zero(),
+            class: Class::Unknown,
+        }
+    }
+
+    pub fn update(&mut self, position: Vec2) {
+        self.positions.push(position);
+        if self.positions.len() > 10 {
+            self.positions.remove(0);
+        }
+        self.average_position = self.positions.iter().fold(Vec2::zero(), |acc, &p| acc + p)
+            / self.positions.len() as f64;
+        if self.positions.len() >= 10 {
+            self.positions.remove(0);
+        }
+    }
+
+    pub fn load_radar(&self) {
+        set_radar_heading((self.average_position - position()).angle());
+        let dist = 100.0 * (11 - self.positions.len()) as f64;
+        debug!("radar width: {}", dist);
+        set_radar_width(angle_at_distance(
+            position().distance(self.average_position),
+            100.0 * (11 - self.positions.len()) as f64,
+        ));
+        set_radar_max_distance((self.average_position - position()).length() + dist);
+        set_radar_min_distance((self.average_position - position()).length() - dist);
+    }
+}

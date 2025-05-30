@@ -1,6 +1,5 @@
 use crate::radar_state::RadarState;
 use crate::target::{Target, TentativeTarget};
-use crate::utils::VecUtils;
 use crate::utils::{angle_at_distance, send_class_and_position};
 use oort_api::prelude::*;
 const TURRET_BULLET_SPEED: f64 = 2000.0;
@@ -28,11 +27,7 @@ impl Cruiser {
         Cruiser {
             scan_radar: RadarState::new(),
             targets: Vec::new(),
-            tentative_target: TentativeTarget {
-                positions: Vec::new(),
-                average_position: Vec2::zero(),
-                class: Class::Unknown,
-            },
+            tentative_target: TentativeTarget::new(),
             index: 0,
             radar_mode: CruiserRadarMode::FindNewTargets,
         }
@@ -90,22 +85,9 @@ impl Cruiser {
         if let Some(contact) = scan() {
             debug!("contact snr {:?}", contact.snr);
             if contact.snr < 10.0 {
-                self.tentative_target.positions.push(contact.position);
-                let average_position = self
-                    .tentative_target
-                    .positions
-                    .iter()
-                    .fold(Vec2::zero(), |acc, t| acc + t)
-                    / self.tentative_target.positions.len() as f64;
-                if self.tentative_target.positions.len() > 10 {
-                    self.tentative_target.positions.remove(0);
-                }
-                self.tentative_target.average_position = average_position;
-                set_radar_heading((average_position - position()).angle());
-                set_radar_width(angle_at_distance(
-                    position().distance(average_position),
-                    1000.0,
-                ));
+                self.tentative_target.class = contact.class;
+                self.tentative_target.update(contact.position);
+                self.tentative_target.load_radar();
                 return;
             }
             self.new_target(contact.position, contact.velocity, contact.class);

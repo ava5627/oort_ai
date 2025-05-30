@@ -1,10 +1,10 @@
-use crate::pid::PID;
+use crate::target::{Target, TentativeTarget};
+use crate::utils::{angle_at_distance, turn_to};
 use oort_api::prelude::*;
-const BULLET_SPEED: f64 = 1000.0; // m/s
+
 pub struct Ship {
-    has_contact: bool,
-    target_last_velocity: Vec2,
-    pid: PID,
+    target: Option<Target>,
+    tentative_target: TentativeTarget,
 }
 impl Default for Ship {
     fn default() -> Self {
@@ -15,66 +15,56 @@ impl Default for Ship {
 impl Ship {
     pub fn new() -> Ship {
         Ship {
-            pid: PID::new(50.0, 0.0, 1000.0, 1.0, max_angular_acceleration()),
-            has_contact: false,
-            target_last_velocity: vec2(0.0, 0.0),
+            target: None,
+            tentative_target: TentativeTarget::new(),
         }
     }
     pub fn tick(&mut self) {
-        if !self.has_contact {
-            set_radar_heading(radar_heading() + radar_width());
-        }
         if let Some(contact) = scan() {
-            self.has_contact = true;
-            let contact_heading = (contact.position - position()).angle();
-            set_radar_heading(contact_heading);
-            set_radar_width(1.0 / ((contact.position - position()).length() / 100.0));
-            let future_pos = self.predict_position(contact.position, contact.velocity);
-            draw_triangle(future_pos, 10.0, 0xffffff);
-            draw_square(contact.position, 10.0, 0xff0000);
-            draw_line(
-                contact.position,
-                contact.position + contact.velocity,
-                0xff0000,
-            );
-            draw_line(
-                position(),
-                vec2(5000.0, 0.0).rotate(heading()) + position(),
-                0x00ff00,
-            );
-            let target_heading = (future_pos - position()).angle();
-            let error = angle_distance(heading(), target_heading);
-            let av = self.pid.update(error);
-            activate_ability(Ability::Boost);
-            accelerate(vec2(1000.0, 0.0).rotate(heading()));
-            torque(av);
-            if (future_pos - position()).length() < 6000.0 {
+            if contact.snr < 20.0 {
+                self.tentative_target.class = contact.class;
+                self.tentative_target.update(contact.position);
+                self.tentative_target.load_radar();
+                turn_to((self.tentative_target.average_position - position()).angle());
+                accelerate(self.tentative_target.average_position);
+            } else {
+                let contact_heading = (contact.position - position()).angle();
+                let dp = contact.position - position();
+                set_radar_heading(contact_heading);
+                set_radar_width(angle_at_distance(dp.length(), 100.0));
+                set_radar_max_distance(dp.length() + 100.0);
+                set_radar_min_distance(dp.length() - 100.0);
+                if self.target.is_none() {
+                    self.target = Some(Target::new(
+                        contact.position,
+                        contact.velocity,
+                        contact.class,
+                    ));
+                } else if let Some(target) = &mut self.target {
+                    target.update(contact.position, contact.velocity);
+                }
+            }
+        } else {
+            set_radar_width(TAU / 30.0);
+            set_radar_heading(radar_heading() + radar_width() / 2.0);
+            set_radar_max_distance(1e100);
+            set_radar_min_distance(0.0);
+        }
+
+        if let Some(target) = &self.target {
+            let prediction = target.lead(0);
+            let angle = prediction.angle();
+            turn_to(angle);
+            let miss_by = angle_diff(heading(), angle) * prediction.length();
+            debug!("Miss by: {}", miss_by);
+            debug!("Distance to target: {}", target.position.distance(position()));
+            if miss_by.abs() < 20.0 && target.position.distance(position()) < 10000.0 {
                 fire(0);
             }
-            debug!("contact heading: {}", contact_heading);
-            debug!(
-                "distance to contact: {}",
-                (contact.position - position()).length()
-            );
-            debug!("distance to future: {}", (future_pos - position()).length());
-        } else {
-            self.has_contact = false;
-            self.target_last_velocity = vec2(0.0, 0.0);
-            set_radar_width(1.0);
-            self.pid.reset();
+            if angle_diff(heading(), angle).abs() < PI / 5.0 {
+                activate_ability(Ability::Boost);
+            }
         }
-    }
-    pub fn predict_position(&mut self, target_position: Vec2, target_velocity: Vec2) -> Vec2 {
-        let relative_velocity = target_velocity - velocity();
-        let relative_position = target_position - position();
-        let acceleration = relative_velocity - self.target_last_velocity;
-        let time_to_target =
-            relative_position.length() / (BULLET_SPEED + relative_velocity.length());
-        let new_position = relative_position
-            + relative_velocity * time_to_target
-            + acceleration * time_to_target.powf(2.0) / 2.0;
-        self.target_last_velocity = relative_velocity;
-        new_position + position()
     }
 }
 pub fn angle_distance(a: f64, b: f64) -> f64 {

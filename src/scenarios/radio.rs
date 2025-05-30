@@ -1,4 +1,6 @@
 use oort_api::prelude::*;
+
+use crate::utils::turn_to;
 const BULLET_SPEED: f64 = 1000.0; // m/s
 pub struct Ship {
     target_last_velocity: Vec2,
@@ -57,18 +59,5 @@ impl Ship {
         let v = vec2(d, 0.0).rotate(heading());
         draw_line(position(), position() + v, 0xff0000);
         future_position
-    }
-}
-pub fn turn_to(target_heading: f64) {
-    let error = angle_diff(target_heading, heading());
-    let time_to_stop = angular_velocity().abs() / max_angular_acceleration();
-    let angle_while_stopping =
-        angular_velocity() * time_to_stop - 0.5 * max_angular_acceleration() * time_to_stop.powi(2);
-    let stopped_error = angle_diff(target_heading, heading() + angle_while_stopping);
-    let applied_torque = max_angular_acceleration() * error.signum();
-    if stopped_error * error.signum() < 0.0 {
-        torque(applied_torque);
-    } else {
-        torque(-applied_torque);
     }
 }

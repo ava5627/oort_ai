@@ -2,7 +2,7 @@
 // Fly through the target circle.
 use oort_api::prelude::*;
 
-use crate::{scenarios::missiles::turn_to, utils::{best_acceleration, boost, max_accelerate}};
+use crate::utils::{best_acceleration, boost, max_accelerate, turn_to};
 
 pub struct Ship {}
 

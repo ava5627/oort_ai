@@ -1,5 +1,8 @@
 use oort_api::prelude::*;
 
+use crate::utils::turn_to;
+use crate::utils::angle_at_distance;
+
 pub enum Ship {
     Missile(Missile),
     Fighter,
@@ -208,21 +211,4 @@ pub fn missile_accelerate(a: Vec2) {
     accelerate(adjusted.rotate(heading()));
 }
 
-pub fn turn_to(target_heading: f64) {
-    let error = angle_diff(target_heading, heading());
-    let time_to_stop = angular_velocity().abs() / max_angular_acceleration();
-    let angle_while_stopping =
-        angular_velocity() * time_to_stop - 0.5 * max_angular_acceleration() * time_to_stop.powi(2);
-    let stopped_error = angle_diff(target_heading, heading() + angle_while_stopping);
-    let applied_torque = max_angular_acceleration() * error.signum();
-    if stopped_error * error.signum() < 0.0 {
-        torque(applied_torque);
-    } else {
-        torque(-applied_torque);
-    }
-}
 
-fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
-    let sin_theta = target_width / distance;
-    sin_theta.asin()
-}

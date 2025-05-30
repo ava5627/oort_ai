@@ -1,4 +1,6 @@
 use oort_api::prelude::*;
+
+use crate::utils::turn_to;
 const BULLET_SPEED: f64 = 1000.0;
 pub struct Ship {
     fighter: Fighter,
@@ -199,19 +201,7 @@ impl Missile {
         self.last_distance = dp;
     }
 }
-pub fn turn_to(target_heading: f64) {
-    let error = angle_diff(target_heading, heading());
-    let time_to_stop = angular_velocity().abs() / max_angular_acceleration();
-    let angle_while_stopping =
-        angular_velocity() * time_to_stop - 0.5 * max_angular_acceleration() * time_to_stop.powi(2);
-    let stopped_error = angle_diff(target_heading, heading() + angle_while_stopping);
-    let applied_torque = max_angular_acceleration() * error.signum();
-    if stopped_error * error.signum() < 0.0 {
-        torque(applied_torque);
-    } else {
-        torque(-applied_torque);
-    }
-}
+
 fn lead_target(target_position: Vec2, target_velocity: Vec2, last_vel: Vec2) -> Vec2 {
     let dp = target_position - position();
     let dv = target_velocity - velocity();

@@ -42,6 +42,7 @@ pub fn max_accelerate(a: Vec2) {
     accelerate(adjusted.rotate(heading()));
 }
 
+/// Turns the ship by applying torque to reach the target heading in the shortest time.
 pub fn turn_to(target_heading: f64) {
     let error = angle_diff(target_heading, heading());
     let time_to_stop = angular_velocity().abs() / max_angular_acceleration();
