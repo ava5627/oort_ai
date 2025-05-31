@@ -5,7 +5,6 @@ const FIGHTER_SIZE: (f64, f64) = (20.0, 20.0);
 const FRIGATE_SIZE: (f64, f64) = (120.0, 50.0);
 const CRUISER_SIZE: (f64, f64) = (240.0, 240.0);
 
-
 pub fn draw_curve(points: &VecDeque<Vec2>, color: u32, closed: bool) {
     points.iter().fold(None, |prev, point| {
         if let Some(prev) = prev {
@@ -37,3 +36,10 @@ pub fn draw_collision_box(class: Class, position: Vec2, rotation: f64) {
     draw_curve(&corners, 0x00ff00, true);
 }
 
+pub fn draw_heading(distance: f64) {
+    draw_line(
+        position(),
+        position() + vec2(distance, 0.0).rotate(heading()),
+        0x00ff00,
+    );
+}

@@ -46,10 +46,11 @@ times=$(echo $result | jq '.[0].times | max as $m | map(.*1000 | round /1000 | i
 echo "Times:        $times"
 printf "Average time: %.3f\n" $avg
 TIMES=~/repos/oort_ai/best.txt
-best=$(rg "$SCENARIO: (\d+.\d+)" $TIMES -r '$1')
+best=$(rg "$SCENARIO: (\d+.\d+)" $TIMES -r '$1' || echo "")
 if [ -z "$best" ]
 then
     best="1000"
+    echo "Best time:    n/a"
     printf "$SCENARIO: %.3f\n" $avg >> $TIMES
 else
     echo "Best time:    $best"

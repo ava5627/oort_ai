@@ -11,7 +11,6 @@ use oort_api::prelude::*;
 
 use crate::utils::VecUtils;
 use crate::utils::turn_to;
-use crate::utils::turn_to_simple;
 use crate::target::Target;
 pub struct Ship {
     target: Option<Target>,
@@ -38,7 +37,6 @@ impl Ship {
             let prediction = target.lead(0);
             let angle = prediction.angle();
             turn_to(angle);
-            // turn_to_simple(angle);
             let miss_by = angle_diff(angle, heading()) * prediction.length();
             if miss_by.abs() < 20.0 {
                 fire(0);

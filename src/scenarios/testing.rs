@@ -1,8 +1,12 @@
-use crate::utils::turn_to;
-use crate::utils::VecUtils;
 use oort_api::prelude::*;
+
+use crate::kalman_filter::KalmanFilter;
+use crate::target::Target;
+use crate::utils::{turn_to, VecUtils};
+
 pub struct Test {
-    time_boost: Option<usize>,
+    kalman_filter: KalmanFilter,
+    target: Option<Target>,
 }
 impl Default for Test {
     fn default() -> Self {
@@ -12,38 +16,58 @@ impl Default for Test {
 
 impl Test {
     pub fn new() -> Test {
-        debug!("spawn missile team 0 position (-100, 0) heading 30");
-        Test { time_boost: None }
+        let enemy_x = 19000.0;
+        let enemy_y = -19000.0;
+        debug!("spawn fighter team 0 position (100, 0) heading 0");
+        debug!(
+            "spawn fighter team 1 position ({}, {}) heading 0",
+            enemy_x, enemy_y
+        );
+        Test {
+            kalman_filter: KalmanFilter::new(),
+            target: None,
+        }
     }
     pub fn tick(&mut self) {
-        debug!("max forward acceleration: {}", max_forward_acceleration());
-        debug!("max lateral acceleration: {}", max_lateral_acceleration());
-        debug!("max backward acceleration: {}", max_backward_acceleration());
-        let max_accel = vec2(max_forward_acceleration(), max_lateral_acceleration());
-        let max_boost_accel = max_accel + vec2(100.0, 0.0);
-        let angle = max_accel.angle();
-        let angle_boost = max_boost_accel.angle();
-        let target_position = vec2(000., 000.);
-        draw_line(position(), target_position, 0x00ff00);
-        let target_angle = position().angle_to(target_position);
-        if angle_diff(heading(), target_angle + angle).abs() < 0.1 {
-            if self.time_boost.is_none() {
-                self.time_boost = Some(0);
-            }
-            activate_ability(Ability::Boost);
-        }
-        if let Some(time_boost) = self.time_boost {
-            self.time_boost = Some(time_boost + 1);
-            if time_boost > 120 {
-                turn_to(target_angle + angle);
-                accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
-            } else {
-                turn_to(target_angle + angle_boost);
-                accelerate(vec2(300.0, -100.0).rotate(target_angle + angle_boost));
-            }
+        let (contact_position, contact_velocity, snr) = if let Some(contact) = scan() {
+            (contact.position, contact.velocity, contact.snr)
         } else {
-            turn_to(target_angle + angle_boost);
-            accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
+            set_radar_heading(radar_heading() - radar_width());
+            set_radar_width(TAU / 40.0);
+            set_radar_max_distance(1e100);
+            set_radar_min_distance(0.0);
+            return;
+        };
+
+        self.kalman_filter
+            .add_measurement(contact_position, contact_velocity, snr);
+        self.kalman_filter.run();
+        self.kalman_filter.point_radar();
+        let predicted_position = self.kalman_filter.predicted_position;
+        if let Some(target) = &mut self.target {
+            target.update(predicted_position, contact_velocity);
+        } else {
+            self.target = Some(Target::new(
+                predicted_position,
+                contact_velocity,
+                Class::Fighter,
+            ));
+        }
+        let target = self.target.as_mut().unwrap();
+        let prediciton = if position().distance(target.position) < 3000.0 {
+            target.lead(0)
+        } else {
+            target.position
+        };
+        let angle = position().angle_to(prediciton);
+        turn_to(angle);
+        accelerate(Vec2::angle_length(angle, max_forward_acceleration()));
+        let miss_by = angle_diff(heading(), angle).abs() * prediciton.length();
+        if prediciton.length() < 3000.0 && miss_by < 20.0 {
+            fire(0);
+        }
+        if angle_diff(heading(), angle).abs() < PI / 10.0 {
+            activate_ability(Ability::Boost);
         }
     }
 }

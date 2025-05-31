@@ -1,5 +1,6 @@
 use crate::pid::PID;
-use crate::utils::{angle_at_distance, draw_curve, send_class_and_position, turn_to};
+use crate::utils::VecUtils;
+use crate::utils::{angle_at_distance, draw_curve, draw_heading, send_class_and_position, turn_to};
 use oort_api::prelude::*;
 use std::collections::VecDeque;
 pub struct Fighter {
@@ -51,7 +52,7 @@ impl Fighter {
             return;
         };
         set_radar_width(angle_at_distance(position().distance(target), 100.0));
-        set_radar_heading((target - position()).angle());
+        set_radar_heading(target.angle_to(position()));
         set_radar_max_distance(position().distance(target) + 100.0);
         set_radar_min_distance(position().distance(target) - 100.0);
         send([target.x, target.y, target_velocity.x, target_velocity.y]);
@@ -127,7 +128,7 @@ impl Fighter {
             + 0.5 * acceleration * time_to_target.powi(2);
         draw_triangle(real_future_position, 10.0, 0x0000ff);
         draw_line(position(), prediction + position(), 0x00ff00);
-        self.draw_heading(position().distance(prediction + position()));
+        draw_heading(position().distance(prediction + position()));
         self.predictions.push_back(real_future_position);
         if self.predictions.len() > 300 {
             self.predictions.pop_front();
@@ -135,13 +136,6 @@ impl Fighter {
         debug!("prediction 0: {}", self.predictions[0]);
         debug!("target_position: {}", target_position);
         prediction
-    }
-    fn draw_heading(&self, distance: f64) {
-        draw_line(
-            position(),
-            position() + vec2(distance, 0.0).rotate(heading()),
-            0xff0000,
-        );
     }
 }
 

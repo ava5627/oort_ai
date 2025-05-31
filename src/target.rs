@@ -101,7 +101,7 @@ impl Target {
         }
         if !future_position.x.is_normal() || !future_position.y.is_normal() {
             debug!("Impossible to hit target");
-            self.position
+            self.position - gun_position
         } else {
             let adjusted_position = future_position + gun_position;
             draw_square(adjusted_position, 10.0, gun_color(gun));
@@ -148,7 +148,6 @@ impl TentativeTarget {
     pub fn load_radar(&self) {
         set_radar_heading((self.average_position - position()).angle());
         let dist = 100.0 * (11 - self.positions.len()) as f64;
-        debug!("radar width: {}", dist);
         set_radar_width(angle_at_distance(
             position().distance(self.average_position),
             100.0 * (11 - self.positions.len()) as f64,

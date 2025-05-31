@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use oort_api::prelude::*;
 
 use crate::target::Target;
-use crate::utils::{draw_curve, turn_to, VecUtils};
+use crate::utils::{draw_curve, draw_heading, turn_to, VecUtils};
 pub struct Ship {
     target: Target,
     predictions: VecDeque<Vec2>,
@@ -33,11 +33,7 @@ impl Ship {
         draw_curve(&self.real_positions, 0xff0000, false);
         draw_triangle(predicted_position + position(), 10.0, 0xff0000);
         draw_line(position(), predicted_position + position(), 0xff0000);
-        draw_line(
-            position(),
-            position() + Vec2::angle_length(heading(), predicted_position.length()),
-            0x00ff00,
-        );
+        draw_heading(predicted_position.length());
         let angle = predicted_position.angle();
         turn_to(angle);
         if angle_diff(heading(), angle).abs() < PI / 10.0 {
