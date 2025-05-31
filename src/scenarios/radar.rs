@@ -44,7 +44,7 @@ impl Ship {
             let angle = prediction.angle();
             turn_to(angle);
             let miss_by = angle_diff(angle, heading()) * prediction.length();
-            if miss_by.abs() < 20.0 {
+            if miss_by.abs() < 19.0 {
                 fire(0);
             }
             accelerate(Vec2::angle_length(angle, max_forward_acceleration()));
