@@ -81,7 +81,7 @@ impl Target {
     }
 
     pub fn draw_path(&mut self) {
-        if current_tick() % 10 == 0 {
+        if current_tick() % 10 == 1 {
             self.history.push_back(self.position);
             if self.history.len() > 50 {
                 self.history.pop_front();
