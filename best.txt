@@ -6,7 +6,7 @@ gunnery: 12.357
 tutorial_lead: 3.988
 tutorial_radio: 25.748
 tutorial_acceleration: 2.383
-tutorial_radar: 11.072
+tutorial_radar: 11.030
 tutorial_guns: 2.350
 tutorial_deflection: 2.963
 tutorial_acceleration2: 2.645
