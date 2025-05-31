@@ -39,7 +39,7 @@ impl Ship {
             set_radar_max_distance(1e100);
             set_radar_min_distance(0.0);
         }
-        if let Some(target) = &self.target {
+        if let Some(target) = &mut self.target {
             let prediction = target.lead(0);
             let angle = prediction.angle();
             turn_to(angle);

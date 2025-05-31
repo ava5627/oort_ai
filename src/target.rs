@@ -1,6 +1,10 @@
+use std::collections::VecDeque;
+
 use crate::utils::angle_at_distance;
 use crate::utils::bullet_speeds;
 use crate::utils::class_max_acceleration;
+use crate::utils::draw_curve;
+use crate::utils::draw_points;
 use crate::utils::gun_color;
 use crate::utils::gun_offsets;
 use crate::utils::VecUtils;
@@ -17,6 +21,8 @@ pub struct Target {
     pub class: Class,
     pub shots_fired: u32,
     pub tick_updated: u32,
+    pub history: VecDeque<Vec2>,
+    pub future_positions: VecDeque<(Vec2, u32)>,
 }
 
 impl Target {
@@ -31,6 +37,8 @@ impl Target {
             class,
             shots_fired: 0,
             tick_updated: current_tick(),
+            history: VecDeque::new(),
+            future_positions: VecDeque::new(),
         }
     }
 
@@ -72,6 +80,26 @@ impl Target {
         draw_text!(self.position, 0xffffff, "{}", i);
     }
 
+    pub fn draw_path(&mut self) {
+        if current_tick() % 10 == 0 {
+            self.history.push_back(self.position);
+            if self.history.len() > 50 {
+                self.history.pop_front();
+            }
+        }
+        let mut fp = VecDeque::new();
+        for j in 0..50 {
+            let future_position = self.position
+                + self.velocity * TICK_LENGTH * j as f64 * 10.0
+                + self.acceleration * (TICK_LENGTH * j as f64 * 10.0).powi(2) / 2.0
+                + self.jerk * (TICK_LENGTH * j as f64 * 10.0).powi(3) / 6.0;
+            fp.push_back(future_position);
+        }
+        draw_curve(&self.history, 0x00ff00, false);
+        draw_curve(&fp, 0x00ffff, false);
+        draw_points(&self.future_positions, 0xff0000);
+    }
+
     pub fn load_radar(&self) {
         set_radar_heading((self.position - position()).angle());
         set_radar_width(angle_at_distance(position().distance(self.position), 50.0));
@@ -79,7 +107,7 @@ impl Target {
         set_radar_min_distance((self.position - position()).length() - 20.0);
     }
 
-    pub fn lead(&self, gun: usize) -> Vec2 {
+    pub fn lead(&mut self, gun: usize) -> Vec2 {
         let gun_offset = gun_offsets(gun);
         let gun_position = position() - gun_offset.rotate(heading());
         let dp = self.position - gun_position;
@@ -88,8 +116,9 @@ impl Target {
         let bullet_speed = bullet_speeds(gun);
 
         let mut future_position = dp;
+        let mut time_to_target = future_position.length() / bullet_speed;
         for _ in 0..100 {
-            let time_to_target = future_position.length() / bullet_speed;
+            time_to_target = future_position.length() / bullet_speed;
             let new_future_position = dp
                 + dv * time_to_target
                 + self.acceleration * time_to_target.powi(2) / 2.0
@@ -103,7 +132,17 @@ impl Target {
             debug!("Impossible to hit target");
             self.position - gun_position
         } else {
-            let adjusted_position = future_position + gun_position;
+            let adjusted_position = future_position + gun_position + velocity() * time_to_target;
+            let angle = future_position.angle();
+            let miss_by = angle_diff(angle, heading()) * future_position.length();
+            if reload_ticks(0) == 0 && miss_by < 10.0 {
+                self.future_positions.push_back((
+                    adjusted_position,
+                    current_tick() + (time_to_target / TICK_LENGTH) as u32,
+                ));
+            }
+            self.future_positions
+                .retain(|&(_, tick)| tick >= current_tick());
             draw_square(adjusted_position, 10.0, gun_color(gun));
             draw_line(gun_position, adjusted_position, gun_color(gun));
             future_position

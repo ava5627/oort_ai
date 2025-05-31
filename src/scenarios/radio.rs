@@ -1,9 +1,9 @@
 use oort_api::prelude::*;
 
-use crate::utils::turn_to;
-const BULLET_SPEED: f64 = 1000.0; // m/s
+use crate::target::Target;
+use crate::utils::{turn_to, VecUtils};
 pub struct Ship {
-    target_last_velocity: Vec2,
+    target: Target,
 }
 impl Default for Ship {
     fn default() -> Self {
@@ -13,51 +13,43 @@ impl Default for Ship {
 
 impl Ship {
     pub fn new() -> Ship {
-        Ship {
-            target_last_velocity: vec2(0.0, 0.0),
+        if let Some((pos, vel)) = recieve_pos_vel() {
+            Ship {
+                target: Target::new(
+                    pos,
+                    vel,
+                    Class::Fighter, // Assuming the class is Fighter for this example
+                ),
+            }
+        } else {
+            Ship {
+                target: Target::new(Vec2::zero(), Vec2::zero(), Class::Fighter),
+            }
         }
     }
     pub fn tick(&mut self) {
         set_radio_channel(2);
-        if receive().is_none() {
-            debug!("no message received");
-            return;
+        if let Some((pos, vel)) = recieve_pos_vel() {
+            self.target.update(pos, vel);
         }
-        activate_ability(Ability::Boost);
-        let msg = receive().unwrap();
-        let contact_position = vec2(msg[0], msg[1]);
-        let contact_velocity = vec2(msg[2], msg[3]);
-        let aim_point = self.lead_target(contact_position, contact_velocity);
-        let target_heading = aim_point.angle();
-        turn_to(target_heading);
-        accelerate(vec2(100.0, 0.0).rotate(target_heading));
-        fire(0);
-    }
-    pub fn lead_target(&mut self, target_position: Vec2, target_velocity: Vec2) -> Vec2 {
-        let dp = target_position - position();
-        let dv = target_velocity - velocity();
-        let acc = (self.target_last_velocity - target_velocity) / TICK_LENGTH;
-        self.target_last_velocity = target_velocity;
-        let mut time_to_target = dp.length() / BULLET_SPEED;
-        let mut future_position = dp + dv * time_to_target + 0.5 * acc * time_to_target.powi(2);
-        let mut delta = future_position;
-        for _ in 0..100 {
-            time_to_target = future_position.length() / BULLET_SPEED;
-            let new_future_position = dp + dv * time_to_target + 0.5 * acc * time_to_target.powi(2);
-            delta = new_future_position - future_position;
-            future_position = new_future_position;
-            if delta.length() < 1e-3 {
-                break;
-            }
+        self.target.tick(0);
+        self.target.draw_path();
+        let prediction = self.target.lead(0);
+        let angle = prediction.angle();
+        turn_to(angle);
+        let miss_by = angle_diff(angle, heading()) * prediction.length();
+        if miss_by < 10.0 {
+            fire(0);
         }
-        debug!("delta: {}", delta.length());
-        debug!("heading: {}", heading());
-        debug!("future position: {}", future_position.angle());
-        draw_polygon(future_position + position(), 10.0, 4, 0.0, 0xffffff);
-        draw_line(position(), future_position + position(), 0xffffff);
-        let d = future_position.length();
-        let v = vec2(d, 0.0).rotate(heading());
-        draw_line(position(), position() + v, 0xff0000);
-        future_position
+        accelerate(Vec2::angle_length(angle, max_forward_acceleration()));
     }
+}
+
+pub fn recieve_pos_vel() -> Option<(Vec2, Vec2)> {
+    if let Some(data) = receive() {
+        let pos = vec2(data[0], data[1]);
+        let vel = vec2(data[2], data[3]);
+        return Some((pos, vel));
+    }
+    None
 }

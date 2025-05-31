@@ -1,6 +1,6 @@
 use oort_api::prelude::*;
 
-use crate::radar_state::RadarState;
+use crate::{radar_state::RadarState, utils::angle_at_distance};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
@@ -275,8 +275,4 @@ fn lead_target(target_position: Vec2, target_velocity: Vec2, bullet_speed: f64) 
     draw_line(position(), actual_target, 0x00ff00);
     draw_triangle(actual_target, 100.0, 0x00ff00);
     (future_position.angle(), future_position)
-}
-fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
-    let sin_theta = target_width / distance;
-    sin_theta.asin()
 }

@@ -27,9 +27,13 @@ for i in $(seq 0 $(($(echo "$SCENARIOS" | wc -l) - 1))); do
     export RUST_LOG=error
     printf "\r\033[K$SCENARIO:"
     result=$(./target/debug/battle -j $SCENARIO $SOURCE_AI $enemy)
+    losses_draws=$(echo $result | jq '(.[0].losses | length) + (.[0].draws | length)')
     NEW_TIME=$(echo "$result" | jq ".[0].average_time")
     NEW_TIME=$(printf "%.3f" $NEW_TIME)
-    if (( $(echo "$NEW_TIME $TIME" | awk '{print ($1 != $2)}') )); then
+    if [[ $losses_draws -gt 0 ]]
+    then
+        printf "\r\033[K$SCENARIO: Losses/Draws: $losses_draws\n"
+    elif (( $(echo "$NEW_TIME $TIME" | awk '{print ($1 != $2)}') )); then
         printf "\r\033[K$SCENARIO: Old: $TIME, New: $NEW_TIME\n"
     fi
     printf "\r\033[K"

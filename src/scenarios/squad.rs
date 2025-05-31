@@ -1,6 +1,6 @@
 use oort_api::prelude::*;
 
-use crate::utils::turn_to;
+use crate::utils::{angle_at_distance, turn_to};
 const BULLET_SPEED: f64 = 1000.0;
 pub struct Ship {
     fighter: Fighter,
@@ -222,8 +222,4 @@ fn lead_target(target_position: Vec2, target_velocity: Vec2, last_vel: Vec2) -> 
         }
     }
     future_position
-}
-fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
-    let sin_theta = target_width / distance;
-    sin_theta.asin()
 }

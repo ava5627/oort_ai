@@ -17,6 +17,24 @@ pub fn draw_curve(points: &VecDeque<Vec2>, color: u32, closed: bool) {
     }
 }
 
+pub fn draw_points(points: &VecDeque<(Vec2, u32)>, color: u32) {
+    for (point, time) in points {
+        if current_tick() > *time {
+            continue; // Skip points older than 100 ticks
+        } else if current_tick() == *time {
+            draw_square(*point, 10.0, 0xffffff); // Draw old points in white
+        } else {
+            draw_square(*point, 10.0, color);
+            // draw_text!(
+            //     *point + vec2(0.0, 15.0),
+            //     0xffffff,
+            //     "{}",
+            //     time - current_tick(),
+            // );
+        }
+    }
+}
+
 pub fn draw_collision_box(class: Class, position: Vec2, rotation: f64) {
     let (width, height) = match class {
         Class::Fighter => FIGHTER_SIZE,

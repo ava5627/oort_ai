@@ -57,7 +57,7 @@ impl Test {
         let prediciton = if position().distance(target.position) < 3000.0 {
             target.lead(0)
         } else {
-            target.position
+            target.position - position()
         };
         let angle = position().angle_to(prediciton);
         turn_to(angle);

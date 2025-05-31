@@ -5,7 +5,7 @@ use crate::utils::{angle_at_distance, VecUtils};
 const BEARING_NOISE_FACTOR: f64 = 1e1 * (TAU / 360.0);
 const DISTANCE_NOISE_FACTOR: f64 = 1e4;
 const VELOCITY_NOISE_FACTOR: f64 = 1e2;
-const MAX_MEASUREMENTS: usize = 30;
+const MAX_MEASUREMENTS: usize = 100;
 
 #[derive(Debug)]
 pub struct KalmanFilter {
@@ -69,20 +69,16 @@ impl KalmanFilter {
             let bearing = my_p.angle_to(*target_position);
 
             // Update Kalman filter for distance
-            let (new_distance_mean, new_distance_variance) = update_kalman(
+            (distance_mean, distance_variance) = update_kalman(
                 distance_mean,
                 distance_variance,
                 distance,
                 distance_variance_m,
             );
-            distance_mean = new_distance_mean;
-            distance_variance = new_distance_variance;
 
             // Update Kalman filter for bearing
-            let (new_bearing_mean, new_bearing_variance) =
+            (bearing_mean, bearing_variance) =
                 update_kalman(bearing_mean, bearing_variance, bearing, bearing_variance_m);
-            bearing_mean = new_bearing_mean;
-            bearing_variance = new_bearing_variance;
 
             let my_future_position = my_p + *my_v * TICK_LENGTH;
             let target_future_position = *target_position + *target_velocity * TICK_LENGTH;
@@ -123,9 +119,9 @@ impl KalmanFilter {
     pub fn point_radar(&self) {
         let distance = position().distance(self.predicted_position);
         set_radar_heading(position().angle_to(self.predicted_position));
-        let width = 200.0 * (1.0 + self.bearing_variance.sqrt());
+        let width = 25.0 * (1.0 + self.bearing_variance.sqrt());
         set_radar_width(angle_at_distance(distance, width));
-        let height = 100.0 * (1.0 + self.distance_variance.sqrt());
+        let height = 25.0 * (1.0 + self.distance_variance.sqrt());
         set_radar_max_distance(distance + height);
         set_radar_min_distance(distance - height);
     }
