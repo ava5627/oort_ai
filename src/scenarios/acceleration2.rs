@@ -13,7 +13,7 @@ impl Ship {
     pub fn tick(&mut self) {
         let dp = target() - position();
         let angle = dp.angle();
-        boost(angle_diff(heading(), angle).abs() < PI / 4.0, &mut self.boost_ticks);
+        boost(angle_diff(heading(), angle).abs() < PI / 2.7, &mut self.boost_ticks);
         let target = Target::new(target(), target_velocity(), Class::Unknown);
         seek(&target);
     }
