@@ -9,9 +9,9 @@
 // tournament results.
 use oort_api::prelude::*;
 
-use crate::utils::VecUtils;
-use crate::utils::turn_to;
 use crate::target::Target;
+use crate::utils::turn_to;
+use crate::utils::VecUtils;
 pub struct Ship {
     target: Option<Target>,
 }
@@ -22,11 +22,17 @@ impl Ship {
     }
 
     pub fn tick(&mut self) {
+        debug!("Hello from radar.rs");
         if let Some(contact) = scan() {
             if let Some(target) = &mut self.target {
                 target.update(contact.position, contact.velocity);
+                target.load_radar();
             } else {
-                self.target = Some(Target::new(contact.position, contact.velocity, contact.class));
+                self.target = Some(Target::new(
+                    contact.position,
+                    contact.velocity,
+                    contact.class,
+                ));
             }
         } else {
             set_radar_heading(radar_heading() + radar_width());
@@ -42,10 +48,6 @@ impl Ship {
                 fire(0);
             }
             accelerate(Vec2::angle_length(angle, max_forward_acceleration()));
-        } else {
-            set_radar_heading(heading());
-            set_radar_max_distance(1000.0);
-            set_radar_min_distance(0.0);
         }
     }
 }
@@ -55,4 +57,3 @@ impl Default for Ship {
         Self::new()
     }
 }
-
