@@ -1,4 +1,4 @@
-tutorial_cruiser: 5.878
+tutorial_cruiser: 5.687
 tutorial_missiles: 3.562
 tutorial_frigate: 5.028
 tutorial_squadron: 11.932
