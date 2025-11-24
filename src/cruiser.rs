@@ -116,10 +116,10 @@ impl Cruiser {
         }
         select_radar(1);
         set_radar_heading(radar_heading() + radar_width());
-        if current_tick() > 20 {
-            set_radar_width(TAU / 40.0);
-        } else {
+        if current_tick() > 10 {
             set_radar_width(TAU / 20.0);
+        } else {
+            set_radar_width(TAU / 10.0);
         }
         set_radar_max_distance(10000.0);
         set_radar_min_distance(0.0);
