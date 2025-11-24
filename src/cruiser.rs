@@ -61,15 +61,37 @@ impl Cruiser {
                 })
                 .unwrap_or((0, &self.targets[0]))
                 .0;
-            for i in 0..8 {
-                let mut index = i % self.targets.len();
-                if index == furthest_index && reload_ticks(0) < 100 {
-                    index = (index + 1) % self.targets.len();
+            let above_targets = self
+                .targets
+                .iter()
+                .enumerate()
+                .filter(|(i, t)| {
+                    t.position.y >= 0.0 && (*i != furthest_index || reload_ticks(0) >= 150)
+                })
+                .collect::<Vec<(usize, &Target)>>();
+            let below_targets = self
+                .targets
+                .iter()
+                .enumerate()
+                .filter(|(i, t)| {
+                    t.position.y <= 0.0 && (*i != furthest_index || reload_ticks(0) >= 150)
+                })
+                .collect::<Vec<(usize, &Target)>>();
+            for i in 0..4 {
+                if !above_targets.is_empty() {
+                    let (j, t) = above_targets[i % above_targets.len()];
+                    select_radio(i);
+                    set_radio_channel(i);
+                    debug!("sending above {} to channel {}", j, i);
+                    send([t.position.x, t.position.y, t.velocity.x, t.velocity.y]);
                 }
-                let t = &self.targets[index];
-                select_radio(i);
-                set_radio_channel(i);
-                send([t.position.x, t.position.y, t.velocity.x, t.velocity.y]);
+                if !below_targets.is_empty() {
+                    let (j, t) = below_targets[i % below_targets.len()];
+                    select_radio(i + 4);
+                    set_radio_channel(i + 4);
+                    debug!("sending below {} to channel {}", j, i + 4);
+                    send([t.position.x, t.position.y, t.velocity.x, t.velocity.y]);
+                }
             }
             let angle = self.lead_target(furthest_index, TURRET_BULLET_SPEED);
             aim(0, angle);
@@ -94,10 +116,28 @@ impl Cruiser {
         }
         select_radar(1);
         set_radar_heading(radar_heading() + radar_width());
-        set_radar_width(TAU / 20.0);
+        if current_tick() > 20 {
+            set_radar_width(TAU / 40.0);
+        } else {
+            set_radar_width(TAU / 20.0);
+        }
         set_radar_max_distance(10000.0);
         set_radar_min_distance(0.0);
         self.scan_radar.save();
+        if self.targets.is_empty() {
+            self.find_targets_alt();
+        }
+    }
+    fn find_targets_alt(&mut self) {
+        select_radar(0);
+        if let Some(contact) = scan() {
+            self.new_target(contact.position, contact.velocity, contact.class);
+            return;
+        }
+        set_radar_heading(radar_heading() - radar_width());
+        set_radar_width(TAU / 20.0);
+        set_radar_max_distance(10000.0);
+        set_radar_min_distance(0.0);
     }
     fn update_targets(&mut self) {
         select_radar(0);

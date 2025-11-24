@@ -7,55 +7,67 @@ use oort_api::prelude::*;
 pub struct CruiserMissile {
     target: Option<Target>,
     boost_time: Option<usize>,
+    spawn_time: u32,
 }
 impl Missile for CruiserMissile {
     fn new() -> CruiserMissile {
-        let radio_channel = id() % 8;
+        let radio_channel = id() % 4 + if position().y >= 0.0 { 0 } else { 4 };
         set_radio_channel(radio_channel as usize);
         CruiserMissile {
             target: None,
             boost_time: None,
+            spawn_time: current_tick(),
         }
     }
     fn tick(&mut self) {
+        if current_tick() == self.spawn_time {
+            debug!("Just spawned");
+            return;
+        }
         debug!("id {:?}", id());
         debug!("radio_channel {:?}", get_radio_channel());
-        let (target_position, target_velocity) = if let Some(contact) =
-            scan().filter(|c| ![Class::Missile, Class::Torpedo].contains(&c.class))
-        {
+        let (target_position, target_velocity) = if let Some(contact) = scan().filter(|c| {
+            ![Class::Missile, Class::Torpedo].contains(&c.class)
+                && !target_behind_cruiser(c.position)
+        }) {
             (contact.position, contact.velocity)
         } else if let Some(msg) = receive() {
             (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
+        } else if let Some(contact) =
+            scan().filter(|c| ![Class::Missile, Class::Torpedo].contains(&c.class))
+        {
+            (contact.position, contact.velocity)
         } else {
             no_target();
-            turn_to(0.0);
-            accelerate(vec2(200.0, 0.0));
+            self.target = None;
+            debug!("no target");
             return;
         };
-        if class() != Class::Torpedo
-            && target_position.y.signum() != position().y.signum()
-            && target_position.y.abs() > 30.0
-            && position().x.abs() < 100.0
-        {
+        if class() != Class::Torpedo && target_behind_cruiser(target_position) {
             debug!("target behind cruiser");
-            no_target();
+            set_radar_heading((target_position - position()).angle());
+            set_radar_width(angle_at_distance(
+                position().distance(target_position),
+                100.0,
+            ));
+            set_radar_max_distance(position().distance(target_position) + 50.0);
+            set_radar_min_distance(position().distance(target_position) - 50.0);
             let accel = if let Some(target) = &self.target {
-                draw_line(
-                    position(),
-                    target.position,
-                    0xFF0000,
-                );
-                vec2(200.0, 0.0) * target.position.x.signum() + vec2(0.0, velocity().y.signum() * -max_lateral_acceleration())
+                draw_line(position(), target.position, 0xFF0000);
+                vec2(200.0, 0.0) * target.position.x.signum()
+                    + vec2(0.0, velocity().y.signum() * -max_lateral_acceleration())
             } else {
                 self.target = Some(Target::new(
                     target_position,
                     target_velocity,
                     Class::Missile,
                 ));
-                vec2(200.0, 0.0) * target_position.x.signum() + vec2(0.0, velocity().y.signum() * -max_lateral_acceleration())
+                vec2(200.0, 0.0) * target_position.x.signum()
+                    + vec2(0.0, velocity().y.signum() * -max_lateral_acceleration())
             };
             accelerate(accel);
             turn_to(accel.angle());
+            debug!("turn to {:>8.3}", accel.angle());
             return;
         }
         set_radar_heading((target_position - position()).angle());
@@ -97,9 +109,15 @@ impl Missile for CruiserMissile {
     }
 }
 
+fn target_behind_cruiser(target_position: Vec2) -> bool {
+    target_position.y.signum() != position().y.signum()
+        && target_position.y.abs() > 30.0
+        && position().x.abs() < 100.0
+}
+
 fn no_target() {
     let radio_channel = get_radio_channel();
-    set_radio_channel((radio_channel + 1) % 8);
+    set_radio_channel((radio_channel + 1) % 4 + if position().y >= 0.0 { 0 } else { 4 });
     set_radar_heading(radar_heading() + radar_width() * position().y.signum());
     set_radar_width(TAU / 10.0);
     set_radar_max_distance(10000.0);
