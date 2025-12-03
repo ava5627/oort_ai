@@ -134,17 +134,23 @@ impl Frigate {
         self.targets.push(t);
     }
     fn fire_turrets(&mut self) {
+        if self.targets.is_empty() {
+            return;
+        }
+        let min_shots = self
+            .targets
+            .iter()
+            .map(|t| t.shots_fired)
+            .min()
+            .unwrap_or(0);
         let mut free_targets = self
             .targets
             .iter()
             .enumerate()
-            .filter(|(_, t)| t.shots_fired == 0)
+            .filter(|(_, t)| t.shots_fired == min_shots)
             .map(|(i, _)| i)
             .collect::<Vec<_>>();
         for weapon_idx in [0, 1, 2, 3] {
-            if free_targets.is_empty() {
-                break;
-            }
             let mut t_index = free_targets[weapon_idx % free_targets.len()];
             if weapon_idx == 0 {
                 t_index = self.prioritize_targets(weapon_idx, &free_targets);
