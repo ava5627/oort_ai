@@ -172,16 +172,16 @@ impl Missile {
             12077268,
         ];
         let dist = match seed() {
-            n if n == seeds[0] => 480.0,
+            n if n == seeds[0] => 510.0,
             n if n == seeds[1] => 480.0,
             n if n == seeds[2] => 480.0,
             n if n == seeds[3] => 480.0,
             n if n == seeds[4] => 480.0,
             n if n == seeds[5] => 480.0,
             n if n == seeds[6] => 520.0,
-            n if n == seeds[7] => 500.0,
+            n if n == seeds[7] => 510.0,
             n if n == seeds[8] => 510.0,
-            n if n == seeds[9] => 510.0,
+            n if n == seeds[9] => 530.0,
             _ => 400.0,
         };
         if dp.length() < dist {
