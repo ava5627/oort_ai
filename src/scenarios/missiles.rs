@@ -2,7 +2,6 @@ use oort_api::prelude::*;
 
 use crate::utils::turn_to;
 use crate::utils::angle_at_distance;
-use crate::utils::VecUtils;
 
 pub enum Ship {
     Missile(Missile),
@@ -159,20 +158,16 @@ impl Missile {
             missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
             turn_to(a.angle() + angle);
         } else {
-            let future_pos = dp + dv * (10.0 * TICK_LENGTH);
+            let future_pos = dp + dv * (11.0 * TICK_LENGTH);
             missile_accelerate(vec2(300.0, -100.0).rotate(future_pos.angle()));
             turn_to(future_pos.angle()-0.05);
-            draw_line(position(), position() + Vec2::angle_length(heading(), 1000.0), 0x00ff00);
-            draw_line(position(), position() + Vec2::angle_length(dp.angle()-0.05, 1000.0), 0x00ff00);
-            draw_line(position(), position() + Vec2::angle_length(heading() - 0.05, 1000.0), 0xffff00);
-            draw_line(position(), position() + Vec2::angle_length(heading() + 0.05, 1000.0), 0xff00ff);
         }
         let seeds = [
             5532676, 426353, 8929133, 10291240, 15253810, 4162318, 984069, 10073013, 16222996,
             12077268,
         ];
         let dist = match seed() {
-            n if n == seeds[0] => 560.0,
+            n if n == seeds[0] => 590.0,
             n if n == seeds[1] => 530.0,
             n if n == seeds[2] => 540.0,
             n if n == seeds[3] => 530.0,
