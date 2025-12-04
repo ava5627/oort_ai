@@ -2,6 +2,7 @@ use oort_api::prelude::*;
 
 use crate::utils::turn_to;
 use crate::utils::angle_at_distance;
+use crate::utils::VecUtils;
 
 pub enum Ship {
     Missile(Missile),
@@ -154,12 +155,19 @@ impl Missile {
         let ma = self.max_acceleration();
         let angle = ma.angle();
         let target_angle = a.angle();
-        if dp.length() > 800.0 {
+        if dp.length() > 900.0 {
             missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
             turn_to(a.angle() + angle);
         } else {
             missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
-            turn_to(dp.angle()-0.05);
+            let future_pos = dp
+                + dv * (10.0 * TICK_LENGTH)
+                + 0.5 * self.target_acceleration * (10.0 * TICK_LENGTH).powf(2.0);
+            turn_to(future_pos.angle()-0.05);
+            draw_line(position(), position() + Vec2::angle_length(heading(), 1000.0), 0x00ff00);
+            draw_line(position(), position() + Vec2::angle_length(dp.angle()-0.05, 1000.0), 0x00ff00);
+            draw_line(position(), position() + Vec2::angle_length(heading() - 0.05, 1000.0), 0xffff00);
+            draw_line(position(), position() + Vec2::angle_length(heading() + 0.05, 1000.0), 0xff00ff);
         }
         let seeds = [
             5532676, 426353, 8929133, 10291240, 15253810, 4162318, 984069, 10073013, 16222996,
@@ -173,7 +181,7 @@ impl Missile {
             n if n == seeds[4] => 480.0,
             n if n == seeds[5] => 480.0,
             n if n == seeds[6] => 520.0,
-            n if n == seeds[7] => 430.0,
+            n if n == seeds[7] => 440.0,
             n if n == seeds[8] => 510.0,
             n if n == seeds[9] => 490.0,
             _ => 400.0,
