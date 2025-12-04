@@ -159,23 +159,23 @@ impl Missile {
             turn_to(a.angle() + angle);
         } else {
             missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
-            turn_to(dp.angle());
+            turn_to(dp.angle()-0.05);
         }
         let seeds = [
             5532676, 426353, 8929133, 10291240, 15253810, 4162318, 984069, 10073013, 16222996,
             12077268,
         ];
         let dist = match seed() {
-            n if n == seeds[0] => 440.0,
-            n if n == seeds[1] => 470.0,
-            n if n == seeds[2] => 390.0,
-            n if n == seeds[3] => 400.0,
-            n if n == seeds[4] => 430.0,
-            n if n == seeds[5] => 400.0,
-            n if n == seeds[6] => 440.0,
+            n if n == seeds[0] => 480.0,
+            n if n == seeds[1] => 480.0,
+            n if n == seeds[2] => 480.0,
+            n if n == seeds[3] => 480.0,
+            n if n == seeds[4] => 480.0,
+            n if n == seeds[5] => 480.0,
+            n if n == seeds[6] => 480.0,
             n if n == seeds[7] => 430.0,
             n if n == seeds[8] => 510.0,
-            n if n == seeds[9] => 460.0,
+            n if n == seeds[9] => 490.0,
             _ => 400.0,
         };
         if dp.length() < dist {
