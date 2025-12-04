@@ -175,8 +175,8 @@ impl Missile {
             n if n == seeds[5] => 580.0,
             n if n == seeds[6] => 540.0,
             n if n == seeds[7] => 560.0,
-            n if n == seeds[8] => 540.0,
-            n if n == seeds[9] => 540.0,
+            n if n == seeds[8] => 550.0,
+            n if n == seeds[9] => 560.0,
             _ => 400.0,
         };
         if dp.length() < dist {
