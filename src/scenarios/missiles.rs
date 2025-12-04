@@ -154,7 +154,7 @@ impl Missile {
         let ma = self.max_acceleration();
         let angle = ma.angle();
         let target_angle = a.angle();
-        if dp.length() > 900.0 {
+        if dp.length() > 940.0 {
             missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
             turn_to(a.angle() + angle);
         } else {
@@ -168,7 +168,7 @@ impl Missile {
         ];
         let dist = match seed() {
             n if n == seeds[0] => 590.0,
-            n if n == seeds[1] => 550.0,
+            n if n == seeds[1] => 560.0,
             n if n == seeds[2] => 540.0,
             n if n == seeds[3] => 570.0,
             n if n == seeds[4] => 580.0,
@@ -176,7 +176,7 @@ impl Missile {
             n if n == seeds[6] => 540.0,
             n if n == seeds[7] => 560.0,
             n if n == seeds[8] => 540.0,
-            n if n == seeds[9] => 530.0,
+            n if n == seeds[9] => 540.0,
             _ => 400.0,
         };
         if dp.length() < dist {
