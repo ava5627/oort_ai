@@ -168,7 +168,7 @@ impl Missile {
         ];
         let dist = match seed() {
             n if n == seeds[0] => 590.0,
-            n if n == seeds[1] => 530.0,
+            n if n == seeds[1] => 550.0,
             n if n == seeds[2] => 540.0,
             n if n == seeds[3] => 530.0,
             n if n == seeds[4] => 580.0,
