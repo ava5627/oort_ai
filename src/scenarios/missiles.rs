@@ -42,19 +42,20 @@ impl Ship {
         if let Some(contact) = scan() {
             let angle = (contact.position - position()).angle();
             torque(angle_diff(heading(), angle).signum() * 100.0);
-            let gain = match seed() {
-                n if n == SEEDS[0] => PI / 5.0,
-                n if n == SEEDS[1] => PI / 4.0,
-                n if n == SEEDS[2] => PI / 4.0,
-                n if n == SEEDS[3] => PI / 1.0,
-                n if n == SEEDS[4] => PI / 8.0,
-                n if n == SEEDS[5] => PI / 15.0,
-                n if n == SEEDS[6] => PI / 2.0,
-                n if n == SEEDS[7] => PI / 6.0,
-                n if n == SEEDS[8] => PI / 8.0,
-                n if n == SEEDS[9] => PI / 1.0,
-                _ => PI / 4.0,
-            };
+            // let gain = match seed() {
+            //     n if n == SEEDS[0] => PI / 5.0,
+            //     n if n == SEEDS[1] => PI / 4.0,
+            //     n if n == SEEDS[2] => PI / 4.0,
+            //     n if n == SEEDS[3] => PI / 1.0,
+            //     n if n == SEEDS[4] => PI / 8.0,
+            //     n if n == SEEDS[5] => PI / 15.0,
+            //     n if n == SEEDS[6] => PI / 2.0,
+            //     n if n == SEEDS[7] => PI / 6.0,
+            //     n if n == SEEDS[8] => PI / 8.0,
+            //     n if n == SEEDS[9] => PI / 1.0,
+            //     _ => PI / 4.0,
+            // };
+            let gain = PI / 16.0;
 
             if angle_diff(heading(), angle).abs() < gain {
                 fire(1)
