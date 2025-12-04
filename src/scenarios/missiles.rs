@@ -159,10 +159,8 @@ impl Missile {
             missile_accelerate(vec2(300.0, -100.0).rotate(target_angle + angle));
             turn_to(a.angle() + angle);
         } else {
-            missile_accelerate(vec2(300.0, -100.0).rotate(dp.angle()));
-            let future_pos = dp
-                + dv * (10.0 * TICK_LENGTH)
-                + 0.5 * self.target_acceleration * (10.0 * TICK_LENGTH).powf(2.0);
+            let future_pos = dp + dv * (10.0 * TICK_LENGTH);
+            missile_accelerate(vec2(300.0, -100.0).rotate(future_pos.angle()));
             turn_to(future_pos.angle()-0.05);
             draw_line(position(), position() + Vec2::angle_length(heading(), 1000.0), 0x00ff00);
             draw_line(position(), position() + Vec2::angle_length(dp.angle()-0.05, 1000.0), 0x00ff00);
@@ -181,7 +179,7 @@ impl Missile {
             n if n == seeds[4] => 480.0,
             n if n == seeds[5] => 480.0,
             n if n == seeds[6] => 520.0,
-            n if n == seeds[7] => 440.0,
+            n if n == seeds[7] => 470.0,
             n if n == seeds[8] => 510.0,
             n if n == seeds[9] => 490.0,
             _ => 400.0,
