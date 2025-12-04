@@ -172,7 +172,7 @@ impl Missile {
             n if n == seeds[3] => 480.0,
             n if n == seeds[4] => 480.0,
             n if n == seeds[5] => 480.0,
-            n if n == seeds[6] => 480.0,
+            n if n == seeds[6] => 520.0,
             n if n == seeds[7] => 430.0,
             n if n == seeds[8] => 510.0,
             n if n == seeds[9] => 490.0,
