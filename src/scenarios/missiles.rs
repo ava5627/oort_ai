@@ -2,6 +2,7 @@ use oort_api::prelude::*;
 
 use crate::utils::turn_to;
 use crate::utils::angle_at_distance;
+use crate::utils::VecUtils;
 
 pub enum Ship {
     Missile(Missile),
@@ -88,6 +89,8 @@ impl Default for Missile {
 
 impl Missile {
     pub fn new() -> Missile {
+        set_radar_heading(PI/6.0);
+        set_radar_width(TAU / 4.0);
         Missile {
             target_position: vec2(0.0, 0.0),
             last_distance: vec2(0.0, 0.0),
@@ -151,26 +154,15 @@ impl Missile {
         } else {
             let future_pos = dp + dv * (11.0 * TICK_LENGTH);
             missile_accelerate(vec2(300.0, -100.0).rotate(future_pos.angle()));
-            turn_to(future_pos.angle()-0.05);
+            turn_to(future_pos.angle() - 0.05);
         }
-        let seeds = [
-            5532676, 426353, 8929133, 10291240, 15253810, 4162318, 984069, 10073013, 16222996,
-            12077268,
-        ];
-        let dist = match seed() {
-            n if n == seeds[0] => 590.0,
-            n if n == seeds[1] => 560.0,
-            n if n == seeds[2] => 540.0,
-            n if n == seeds[3] => 570.0,
-            n if n == seeds[4] => 580.0,
-            n if n == seeds[5] => 580.0,
-            n if n == seeds[6] => 540.0,
-            n if n == seeds[7] => 560.0,
-            n if n == seeds[8] => 550.0,
-            n if n == seeds[9] => 560.0,
-            _ => 400.0,
-        };
-        if dp.length() < dist {
+        let time = 11.0;
+        let future_dp = dp
+            + self.target_velocity * (time * TICK_LENGTH)
+            + 0.5 * self.target_acceleration * (time * TICK_LENGTH).powf(2.0);
+        let frag_p =
+            (velocity() + Vec2::angle_length(heading() + 0.05, 1900.0)) * TICK_LENGTH * time;
+        if future_dp.length() - frag_p.length() < 5.0 {
             explode();
         }
         self.last_distance = dp;
@@ -198,9 +190,9 @@ impl Missile {
 pub fn missile_accelerate(a: Vec2) {
     let missile_frame = a.rotate(-heading());
     let x = missile_frame.x.clamp(1e-10, max_forward_acceleration());
-    let y = missile_frame.y.clamp(-max_lateral_acceleration(), max_lateral_acceleration());
+    let y = missile_frame
+        .y
+        .clamp(-max_lateral_acceleration(), max_lateral_acceleration());
     let adjusted = vec2(x, y);
     accelerate(adjusted.rotate(heading()));
 }
-
-
