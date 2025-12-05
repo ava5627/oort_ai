@@ -61,31 +61,41 @@ def main():
         " ".join(cmd), shell=True, text=True, env={"RUST_LOG": "error"}
     )
     result = json.loads(output)[0]
-    s = "Times:  "
-    for t in result["times"]:
-        s += f"{t:.3f},  "
-    s = s[:-3]
-    print(s)
     if not Path("./times.json").exists():
         with open("./times.json", "w") as f:
             json.dump({}, f)
     with open("./times.json", "r") as f:
         best_times = json.load(f)
+    s = "Times:  "
+    for i, t in enumerate(result["times"]):
+        best = best_times.get(scenario_name, {}).get("times", [])
+        if i < len(best):
+            if best[i] >= 10 and t < 10:
+                s += f"{i}: {t:06.3f},  "
+            else:
+                s += f"{i}: {t:.3f},  "
+        else:
+            s += f"{i}: {t:.3f},  "
+    s = s[:-3]
+    print(s)
     if scenario_name in best_times:
         bests = "Bests:  "
-        for best in best_times.get(scenario_name, {}).get("times", []):
-            bests += f"{best:.3f},  "
+        for i, best in enumerate(best_times.get(scenario_name, {}).get("times", [])):
+            if result["times"][i] >= 10 and best < 10:
+                bests += f"{i}: {best:06.3f},  "
+            else:
+                bests += f"{i}: {best:.3f},  "
         print(bests[:-3])
-        diffs = "Diffs: "
-        for best, current in zip(best_times[scenario_name]["times"], result["times"]):
+        diffs = "Diffs:    "
+        for i, (best, current) in enumerate(zip(best_times[scenario_name]["times"], result["times"])):
             if current < best:
                 diffs += "\033[32m"
             elif current > best:
                 diffs += "\033[31m+"
             else:
                 diffs += "\033[34m "
-            diffs += f"{current - best:.3f}\033[0m, "
-        print(diffs[:-2])
+            diffs += f"{current - best:.3f}\033[0m,    "
+        print(diffs[:-5])
         print(f"Best Time:    {best_times[scenario_name]['average_time']:.3f}", end=" ")
         if result["average_time"] < best_times[scenario_name]["average_time"]:
             print(
