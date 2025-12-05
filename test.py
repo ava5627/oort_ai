@@ -16,6 +16,12 @@ def main():
         help="Run the scenario without committing changes.",
     )
     parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Force saving even if not a new best time.",
+    )
+    parser.add_argument(
         "--source",
         type=str,
         default="./target/bundle_output.rs",
@@ -115,6 +121,7 @@ def main():
     if (
         scenario_name not in best_times
         or result["average_time"] < best_times[scenario_name]["average_time"]
+        or args.force
     ):
         print("New best time!")
         if not no_commit:

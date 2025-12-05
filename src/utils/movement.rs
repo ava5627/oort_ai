@@ -19,10 +19,8 @@ pub fn best_acceleration(target_heading: f64) -> Vec2 {
     if angle_diff(heading(), target_heading + angle).abs()
         < angle_diff(heading(), target_heading - angle).abs()
     {
-        debug!("positive");
         ma
     } else {
-        debug!("negative");
         ma * vec2(1.0, -1.0)
     }
 }
