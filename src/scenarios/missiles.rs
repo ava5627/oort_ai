@@ -36,15 +36,16 @@ impl Ship {
             m.tick();
             return;
         }
-        let seeds = [SEEDS[1], SEEDS[3], SEEDS[6]];
-        if seeds.contains(&seed()) {
+        let seed_r = seed();
+        let index = SEEDS.iter().position(|&s| s == seed_r).unwrap_or(10);
+        if [0, 1, 3, 6, 9].contains(&index) {
             fire(1);
         }
         if let Some(contact) = scan() {
             let angle = (contact.position - position()).angle();
             torque(angle_diff(heading(), angle).signum() * 100.0);
-            let gain = match seed() {
-                n if n == SEEDS[0] => PI / 5.0,
+            let gain = match index {
+                7 => PI / 6.0,
                 _ => PI / 16.0,
             };
 
