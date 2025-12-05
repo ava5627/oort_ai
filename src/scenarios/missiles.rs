@@ -47,12 +47,7 @@ impl Ship {
         if let Some(contact) = scan() {
             let angle = (contact.position - position()).angle();
             torque(angle_diff(heading(), angle).signum() * 100.0);
-            let gain = match index {
-                7 => PI / 6.0,
-                _ => PI / 16.0,
-            };
-
-            if angle_diff(heading(), angle).abs() < gain {
+            if angle_diff(heading(), angle).abs() < PI / 16.0 {
                 fire(1)
             }
             set_radar_heading(angle);

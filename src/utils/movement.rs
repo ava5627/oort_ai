@@ -19,10 +19,8 @@ pub fn best_acceleration(target_heading: f64) -> Vec2 {
     if angle_diff(heading(), target_heading + angle).abs()
         < angle_diff(heading(), target_heading - angle).abs()
     {
-        debug!("positive");
         ma
     } else {
-        debug!("negative");
         ma * vec2(1.0, -1.0)
     }
 }
@@ -63,8 +61,7 @@ pub fn turn_to_simple(target_heading: f64) {
 }
 
 pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
-    let tan_theta = target_width / distance / 2.0;
-    tan_theta.atan() * 2.0
+    target_width / distance
 }
 
 pub fn seek(target: &Target) {
