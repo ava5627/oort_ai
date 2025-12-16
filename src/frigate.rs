@@ -179,10 +179,7 @@ impl Frigate {
                 let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
                 let applied_torque = self.pid.update(angle_diff(heading(), angle));
-                debug!("Applied torque: {}", applied_torque);
                 torque(applied_torque);
-                // turn_to(angle);
-                debug!("Miss by {}", miss_by);
                 if miss_by.abs() < 7.0 && reload_ticks(weapon_idx) == 0 {
                     fire(weapon_idx);
                     self.pid.reset();

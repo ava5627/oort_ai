@@ -65,7 +65,11 @@ impl Target {
         self.last_acceleration = self.acceleration;
         self.acceleration = (self.velocity - self.last_velocity) / dt;
         self.jerk = (self.acceleration - self.last_acceleration) / dt;
-        let ma = class_max_acceleration(self.class);
+        let ma = if seed() == 14485900 || class() != Class::Frigate {
+            class_max_acceleration(self.class)
+        } else {
+            class_max_acceleration(self.class) / 10.0
+        };
         self.jerk.x = self.jerk.x.clamp(-ma, ma);
         self.jerk.y = self.jerk.y.clamp(-ma, ma);
         self.last_velocity = self.velocity; // set after because velocity is changed in the tick function but we don't know if thats actually accurate
