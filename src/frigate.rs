@@ -3,7 +3,6 @@ use std::cmp::Ordering;
 use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
-use crate::utils::turn_to;
 use maths_rs::num::Cast;
 use oort_api::prelude::*;
 #[derive(PartialEq)]

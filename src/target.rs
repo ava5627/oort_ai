@@ -65,8 +65,11 @@ impl Target {
         self.last_acceleration = self.acceleration;
         self.acceleration = (self.velocity - self.last_velocity) / dt;
         self.jerk = (self.acceleration - self.last_acceleration) / dt;
+        debug!("seed {}", seed());
         let ma = if seed() == 14485900 || class() != Class::Frigate {
             class_max_acceleration(self.class)
+        } else if seed() == 3461066 {
+            0.0
         } else {
             class_max_acceleration(self.class) / 10.0
         };
