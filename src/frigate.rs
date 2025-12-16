@@ -1,16 +1,8 @@
-use std::cmp::Ordering;
-
 use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
 use maths_rs::num::Cast;
 use oort_api::prelude::*;
-#[derive(PartialEq)]
-enum TargetHeuristic {
-    Angle,
-    Distance,
-    Other,
-}
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrigateRadarMode {
     FindNewTargets,
@@ -162,7 +154,12 @@ impl Frigate {
         for weapon_idx in [0, 1, 2, 3] {
             let mut t_index = free_targets[weapon_idx % free_targets.len()];
             if weapon_idx == 0 {
-                t_index = self.prioritize_targets(weapon_idx, &free_targets);
+                t_index = free_targets
+                    .iter()
+                    .map(|&i| (i, angle_diff(heading(), self.targets[i].position.angle())))
+                    .min_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+                    .unwrap()
+                    .0;
                 if free_targets.len() > 2 {
                     free_targets.retain(|&x| x != t_index);
                 }
@@ -208,53 +205,6 @@ impl Frigate {
                 aim(weapon_idx, angle);
                 fire(weapon_idx);
             }
-        }
-    }
-    fn prioritize_targets(&self, weapon_index: usize, free_targets: &[usize]) -> usize {
-        let heuristic = match weapon_index {
-            0 => (TargetHeuristic::Angle, true),
-            1 => (TargetHeuristic::Angle, false),
-            2 => (TargetHeuristic::Distance, true),
-            3 => (TargetHeuristic::Other, false),
-            _ => unreachable!(),
-        };
-        if heuristic.0 == TargetHeuristic::Other {
-            return free_targets[0];
-        }
-        *free_targets
-            .iter()
-            .min_by(|&&a, &&b| {
-                let a = &self.targets[a];
-                let b = &self.targets[b];
-                self.evaluate(a, b, &heuristic)
-            })
-            .unwrap()
-    }
-    fn evaluate(
-        &self,
-        target: &Target,
-        other: &Target,
-        heuristic: &(TargetHeuristic, bool),
-    ) -> Ordering {
-        let cmp = match heuristic.0 {
-            TargetHeuristic::Angle => {
-                let angle = angle_diff(heading(), (target.position - position()).angle()).abs();
-                let other_angle =
-                    angle_diff(heading(), (other.position - position()).angle()).abs();
-                angle.partial_cmp(&other_angle).unwrap()
-            }
-            TargetHeuristic::Distance => {
-                let distance = position().distance(target.position);
-                let other_distance = position().distance(other.position);
-                distance.partial_cmp(&other_distance).unwrap()
-            }
-            TargetHeuristic::Other => {
-                return Ordering::Equal;
-            }
-        };
-        match heuristic.1 {
-            true => cmp,
-            false => cmp.reverse(),
         }
     }
 }

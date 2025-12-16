@@ -61,13 +61,10 @@ impl Missile for FrigateMissile {
             ));
         }
         let behind = self.target_behind_frigate(target_position);
-        // debug!("Target position: {:?}", target_position,);
-        // debug!("Missile position: {:?}", position(),);
         if behind {
             debug!("Target behind frigate, evading");
             let mut pos = vec2(200.0, 200.0);
             let dp = target_position - position();
-            // debug!("Delta position: {:?}", dp);
             if dp.x.abs() < dp.y.abs() {
                 pos = vec2(
                     pos.x * position().x.signum(),
@@ -111,6 +108,6 @@ impl FrigateMissile {
         let target_angle = target_position.angle();
         let missile_angle = position().angle();
         let diff = angle_diff(target_angle, missile_angle);
-        PI - diff.abs() < PI / 7.0
+        PI - diff.abs() < PI / 6.0
     }
 }
