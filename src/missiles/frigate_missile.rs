@@ -22,21 +22,22 @@ impl Missile for FrigateMissile {
         }
     }
     fn tick(&mut self) {
-        let (target_position, target_velocity) =
-            if let Some(contact) = scan().filter(|c| c.class != Class::Missile && self.target.is_some()) {
-                (contact.position, contact.velocity)
-            } else if let Some(msg) = receive() {
-                (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
-            } else if let Some(contact) = scan().filter(|c| c.class != Class::Missile) {
-                (contact.position, contact.velocity)
-            } else {
-                set_radar_heading(radar_heading() + radar_width());
-                set_radar_width(TAU / 4.0);
-                set_radar_max_distance(1e99);
-                set_radar_min_distance(0.0);
-                accelerate(vec2(100.0, 0.0).rotate(heading()));
-                return;
-            };
+        let (target_position, target_velocity) = if let Some(contact) =
+            scan().filter(|c| c.class != Class::Missile && self.target.is_some())
+        {
+            (contact.position, contact.velocity)
+        } else if let Some(msg) = receive() {
+            (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
+        } else if let Some(contact) = scan().filter(|c| c.class != Class::Missile) {
+            (contact.position, contact.velocity)
+        } else {
+            set_radar_heading(radar_heading() + radar_width());
+            set_radar_width(TAU / 4.0);
+            set_radar_max_distance(1e99);
+            set_radar_min_distance(0.0);
+            accelerate(vec2(100.0, 0.0).rotate(heading()));
+            return;
+        };
         set_radar_heading(position().angle_to(target_position));
         set_radar_width(angle_at_distance(
             position().distance(target_position),
@@ -60,14 +61,27 @@ impl Missile for FrigateMissile {
             ));
         }
         let behind = self.target_behind_frigate(target_position);
+        // debug!("Target position: {:?}", target_position,);
+        // debug!("Missile position: {:?}", position(),);
         if behind {
-            let diff = angle_diff(target_position.angle(), position().angle());
-            if diff > 0.0 {
-                turn_to(position().rotate(-PI / 2.0).angle());
+            debug!("Target behind frigate, evading");
+            let mut pos = vec2(200.0, 200.0);
+            let dp = target_position - position();
+            // debug!("Delta position: {:?}", dp);
+            if dp.x.abs() < dp.y.abs() {
+                pos = vec2(
+                    pos.x * position().x.signum(),
+                    pos.y * target_position.y.signum(),
+                );
             } else {
-                turn_to(position().rotate(PI / 2.0).angle());
+                pos = vec2(
+                    pos.x * target_position.x.signum(),
+                    pos.y * position().y.signum(),
+                );
             }
-            accelerate(vec2(100.0, 0.0).rotate(heading()));
+            draw_line(position(), pos, 0xffff00);
+            turn_to((pos - position()).angle());
+            max_accelerate(pos - position());
         } else {
             self.seek_target();
         }
@@ -97,6 +111,6 @@ impl FrigateMissile {
         let target_angle = target_position.angle();
         let missile_angle = position().angle();
         let diff = angle_diff(target_angle, missile_angle);
-        PI - diff.abs() < PI / 13.0
+        PI - diff.abs() < PI / 7.0
     }
 }

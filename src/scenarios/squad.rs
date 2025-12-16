@@ -197,7 +197,6 @@ impl Missile {
         if dp.length() < 300.0 {
             explode();
         }
-        debug!("{}", seed());
         self.last_distance = dp;
     }
 }
