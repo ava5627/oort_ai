@@ -111,6 +111,6 @@ impl FrigateMissile {
         let target_angle = target_position.angle();
         let missile_angle = position().angle();
         let diff = angle_diff(target_angle, missile_angle);
-        PI - diff.abs() < PI / 7.0
+        PI - diff.abs() < PI / 6.0
     }
 }
