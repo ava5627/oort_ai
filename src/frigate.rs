@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
+use crate::utils::turn_to;
 use maths_rs::num::Cast;
 use oort_api::prelude::*;
 #[derive(PartialEq)]
@@ -22,6 +23,7 @@ pub struct Frigate {
     radar_mode: FrigateRadarMode,
     scan_radar: RadarState,
     pid: PID,
+    found_all_targets: bool,
 }
 impl Default for Frigate {
     fn default() -> Self {
@@ -31,19 +33,19 @@ impl Default for Frigate {
 
 impl Frigate {
     pub fn new() -> Frigate {
-        set_radar_heading(PI);
         Frigate {
             targets: Vec::new(),
             index: 0,
             radar_mode: FrigateRadarMode::FindNewTargets,
             scan_radar: RadarState::new(),
             pid: PID::new(
-                8.0,
+                12.0,
                 0.0,
-                300.0 / 60.0,
+                6.0,
                 max_angular_acceleration(),
                 max_angular_acceleration(),
             ),
+            found_all_targets: false,
         }
     }
     pub fn tick(&mut self) {
@@ -66,11 +68,15 @@ impl Frigate {
     fn find_targets(&mut self) {
         if let Some(contact) = scan() {
             self.new_target(contact.position, contact.velocity, contact.class);
+            set_radar_min_distance(contact.position.distance(position()) + 20.0);
+        } else {
+            self.scan_radar.rotate();
         }
-        set_radar_heading(radar_heading() + radar_width());
-        set_radar_width(TAU / 20.0);
         self.scan_radar.save();
-        if !self.targets.is_empty() {
+        if self.targets.len() >= 5 {
+            self.found_all_targets = true;
+        }
+        if self.found_all_targets {
             self.targets[0].load_radar();
             self.index = 0;
             self.radar_mode = FrigateRadarMode::UpdateTargets;
@@ -116,7 +122,11 @@ impl Frigate {
         if self.index + 1 < self.targets.len() {
             self.index += 1;
             self.targets[self.index].load_radar();
+        } else if !self.targets.is_empty() {
+            self.index = 0;
+            self.targets[0].load_radar();
         } else {
+            self.found_all_targets = false;
             self.scan_radar.restore();
             self.radar_mode = FrigateRadarMode::FindNewTargets;
         }
@@ -169,9 +179,13 @@ impl Frigate {
                 let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
                 let applied_torque = self.pid.update(angle_diff(heading(), angle));
+                debug!("Applied torque: {}", applied_torque);
                 torque(applied_torque);
+                // turn_to(angle);
+                debug!("Miss by {}", miss_by);
                 if miss_by.abs() < 7.0 && reload_ticks(weapon_idx) == 0 {
                     fire(weapon_idx);
+                    self.pid.reset();
                     target.shots_fired += 1;
                 }
             } else if weapon_idx == 3 {

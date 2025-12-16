@@ -23,10 +23,12 @@ impl Missile for FrigateMissile {
     }
     fn tick(&mut self) {
         let (target_position, target_velocity) =
-            if let Some(contact) = scan().filter(|c| c.class != Class::Missile) {
+            if let Some(contact) = scan().filter(|c| c.class != Class::Missile && self.target.is_some()) {
                 (contact.position, contact.velocity)
             } else if let Some(msg) = receive() {
                 (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
+            } else if let Some(contact) = scan().filter(|c| c.class != Class::Missile) {
+                (contact.position, contact.velocity)
             } else {
                 set_radar_heading(radar_heading() + radar_width());
                 set_radar_width(TAU / 4.0);

@@ -1,4 +1,3 @@
-use crate::radar_state::RadarState;
 use crate::target::{Target, TentativeTarget};
 use crate::utils::{angle_at_distance, send_class_and_position};
 use oort_api::prelude::*;
@@ -10,7 +9,6 @@ pub enum CruiserRadarMode {
     UpdateTargets,
 }
 pub struct Cruiser {
-    scan_radar: RadarState,
     targets: Vec<Target>,
     tentative_target: TentativeTarget,
     index: usize,
@@ -25,7 +23,6 @@ impl Default for Cruiser {
 impl Cruiser {
     pub fn new() -> Cruiser {
         Cruiser {
-            scan_radar: RadarState::new(),
             targets: Vec::new(),
             tentative_target: TentativeTarget::new(),
             index: 0,
@@ -103,7 +100,6 @@ impl Cruiser {
     }
     fn find_targets(&mut self) {
         select_radar(1);
-        self.scan_radar.restore();
         if let Some(contact) = scan() {
             debug!("contact snr {:?}", contact.snr);
             if contact.snr < 10.0 {
@@ -123,7 +119,6 @@ impl Cruiser {
         }
         set_radar_max_distance(10000.0);
         set_radar_min_distance(0.0);
-        self.scan_radar.save();
         if self.targets.is_empty() {
             self.find_targets_alt();
         }
