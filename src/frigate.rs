@@ -175,13 +175,9 @@ impl Frigate {
                 let prediction = target.lead(weapon_idx);
                 let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
-                if [6136476, 6772418, 12549780].contains(&seed()) {
-                    turn_to_faster(angle);
-                } else {
-                    let applied_torque = self.pid.update(angle_diff(heading(), angle));
-                    torque(applied_torque);
-                }
-                if miss_by.abs() < 7.0 && reload_ticks(weapon_idx) == 0 {
+                turn_to_faster(target);
+                debug!("Miss by {}", miss_by);
+                if miss_by.abs() < 6.0 && reload_ticks(weapon_idx) == 0 {
                     fire(weapon_idx);
                     self.pid.reset();
                     target.shots_fired += 1;

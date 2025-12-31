@@ -1,6 +1,6 @@
 use oort_api::prelude::*;
 
-use crate::utils::{turn_to_faster, VecUtils};
+use crate::utils::{turn_to, VecUtils};
 
 pub struct Test {
     target_heading: f64,
@@ -33,7 +33,7 @@ impl Test {
             position() + Vec2::angle_length(heading(), 1000.0),
             0xff0000,
         );
-        turn_to_faster(self.target_heading);
+        turn_to(self.target_heading);
         let curr_error = angle_diff(self.target_heading, heading());
         debug!("curr_error {:?}", curr_error);
         if curr_error.abs() < 0.01 && reload_ticks(0) == 0 {

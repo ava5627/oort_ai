@@ -145,12 +145,12 @@ impl Target {
             let adjusted_position = future_position + gun_position + velocity() * time_to_target;
             let angle = future_position.angle();
             let miss_by = angle_diff(angle, heading()) * future_position.length();
-            if reload_ticks(gun) == 0 && (miss_by.abs() < 10.0 || gun != 0) {
+            // if reload_ticks(gun) == 0 && (miss_by.abs() < 10.0 || gun != 0) {
                 self.future_positions.push_back((
                     adjusted_position,
                     current_tick() + (time_to_target / TICK_LENGTH) as u32,
                 ));
-            }
+            // }
             self.future_positions
                 .retain(|&(_, tick)| tick >= current_tick());
             draw_square(adjusted_position, 10.0, gun_color(gun));

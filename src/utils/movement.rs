@@ -60,8 +60,19 @@ pub fn turn_to_simple(target_heading: f64) {
     turn(10.0 * error);
 }
 
-pub fn turn_to_faster(target_heading: f64) {
-    let av = angular_velocity() * TICK_LENGTH;
+pub fn turn_to_faster(target: &Target) {
+    let nf = target.future_positions.len();
+    if nf == 0 {
+        return;
+    }
+    let target_heading = (target.future_positions[nf-1].0 - position()).angle();
+    let av = if nf >= 2 {
+        let last_heading = (target.future_positions[nf-2].0 - position()).angle();
+        let delta_heading = angle_diff(target_heading, last_heading);
+        angular_velocity() * TICK_LENGTH - delta_heading * TICK_LENGTH
+    } else {
+        angular_velocity() * TICK_LENGTH
+    };
     let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
     let time_to_stop = av.abs() / aa;
     let heading_when_stopped =
