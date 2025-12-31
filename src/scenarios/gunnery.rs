@@ -8,13 +8,15 @@ pub struct TargetState {
     velocity: Vec2,
     last_heading: Option<f64>,
     shots_fired: usize,
+    observations: usize,
 }
 impl TargetState {
     fn load_radar(&self) {
-        set_radar_heading((self.position - position()).angle());
-        set_radar_width(angle_at_distance(position().distance(self.position), 50.0));
-        set_radar_max_distance((self.position - position()).length() + 20.0);
-        set_radar_min_distance((self.position - position()).length() - 20.0);
+        let dp = self.position - position() + self.velocity * TICK_LENGTH;
+        set_radar_heading(dp.angle());
+        set_radar_width(angle_at_distance(dp.length(), 50.0));
+        set_radar_max_distance(dp.length() + 20.0);
+        set_radar_min_distance(dp.length() - 20.0);
     }
 }
 
@@ -68,16 +70,43 @@ impl Ship {
         } else if self.radar_mode == FrigateRadarMode::UpdateTargets {
             self.update_targets();
         }
-        debug!("num_targets remaining: {}", self.num_targets);
-        debug!("num_targets: {}", self.targets.len());
+        if self.targets.len() == 4 {
+            if let Some(f) = self.fp {
+                draw_triangle(f + position(), 150.0, 0xffffff);
+                draw_triangle(f + position(), 10.0, 0xffffff);
+            }
+        }
         self.aim_and_fire();
     }
     fn update(&mut self) {
+        if self.num_targets == 0 {
+            return;
+        }
         for (i, t) in self.targets.iter_mut().enumerate() {
             t.position += t.velocity * TICK_LENGTH;
             draw_polygon(t.position, 50.0, 8, 0.0, 0xffffff);
             draw_square(t.position, 10.0, 0xffffff);
             draw_text!(t.position, 0xffffff, "{:?}", i);
+        }
+        let mut too_close = None;
+        for (i, t) in self.targets.iter().enumerate() {
+            let closest_distance = self
+                .targets
+                .iter()
+                .enumerate()
+                .filter(|(j, _)| *j != i)
+                .map(|(j, other)| (j, t.position.distance(other.position)))
+                .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+            if let Some(closest_distance) = closest_distance.filter(|(_, d)| *d < 10.0) {
+                too_close = Some(closest_distance.0);
+                break;
+            }
+        }
+        if let Some(idx) = too_close {
+            self.targets.remove(idx);
+            if self.update_index >= self.targets.len() {
+                self.update_index = 0;
+            }
         }
     }
     fn find_targets(&mut self) {
@@ -135,8 +164,10 @@ impl Ship {
             velocity: new_velocity,
             last_heading: None,
             shots_fired: 0,
+            observations: 1,
         };
         self.targets.push(t);
+        self.num_targets = self.targets.len().max(self.num_targets);
         true
     }
     fn aim_and_fire(&mut self) {
@@ -145,7 +176,11 @@ impl Ship {
             return;
         } else if !self.fired {
             let fp = if let Some(f) = self.fp {
-                f
+                if self.targets[0].observations >= 5 {
+                    f
+                } else {
+                    self.predict_turn(self.targets[0].clone())
+                }
             } else {
                 self.predict_turn(self.targets[0].clone())
             };
@@ -161,6 +196,7 @@ impl Ship {
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
                 self.targets[0].shots_fired += 1;
+                self.num_targets -= 1;
                 self.fired = true;
             }
             return;
@@ -206,6 +242,7 @@ impl Ship {
             let target = &mut self.targets[self.update_index];
             target.position = contact.position;
             target.velocity = contact.velocity;
+            target.observations += 1;
         } else {
             self.targets.remove(self.update_index);
             if let Some(current_target) = self.current_target {
@@ -221,7 +258,11 @@ impl Ship {
             }
             self.update_index -= 1;
         }
-        if self.update_index + 1 < self.targets.len() {
+        if self.update_index < self.targets.len()
+            && self.targets[self.update_index].observations < 5
+        {
+            self.targets[self.update_index].load_radar();
+        } else if self.update_index + 1 < self.targets.len() {
             self.update_index += 1;
             self.targets[self.update_index].load_radar();
         } else {
@@ -281,7 +322,7 @@ impl Ship {
         let dv = target.velocity - velocity();
         let time_to_target = dp.length() / 4000.0;
         let mut future_position = dp + dv * time_to_target;
-        for _ in 0..100 {
+        for _ in 0..200 {
             let turn_time = time_to_turn_to(future_position.angle());
             let time_to_target = (future_position.length() - 40.0) / 4000.0;
             let new_future_position = dp + dv * (time_to_target + turn_time);

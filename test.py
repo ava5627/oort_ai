@@ -95,12 +95,15 @@ def main():
         diffs = "Diffs:    "
         for i, (best, current) in enumerate(zip(best_times[scenario_name]["times"], result["times"])):
             if current < best:
-                diffs += "\033[32m"
+                diffs += "\033[32m-"
             elif current > best:
                 diffs += "\033[31m+"
             else:
                 diffs += "\033[34m "
-            diffs += f"{current - best:.3f}\033[0m,    "
+            if result["times"][i] >= 10 and abs(current - best) < 10:
+                diffs += f"{abs(current - best):06.3f}\033[0m,    "
+            else:
+                diffs += f"{abs(current - best):.3f}\033[0m,    "
         print(diffs[:-5])
         print(f"Best Time:    {best_times[scenario_name]['average_time']:.3f}", end=" ")
         if result["average_time"] < best_times[scenario_name]["average_time"]:
