@@ -1,12 +1,13 @@
 use oort_api::prelude::*;
 
 use crate::radar_state::RadarState;
-use crate::utils::{angle_at_distance, turn_to_fast, VecUtils};
+use crate::utils::{angle_at_distance, turn_to, turn_to_fast, VecUtils};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
     velocity: Vec2,
     last_heading: Option<f64>,
+    predicted_position: Option<Vec2>,
     shots_fired: usize,
     observations: usize,
 }
@@ -172,6 +173,7 @@ impl Ship {
             last_heading: None,
             shots_fired: 0,
             observations: 1,
+            predicted_position: None,
         };
         self.targets.push(t);
         self.num_targets = self.targets.len().max(self.num_targets);
@@ -179,7 +181,7 @@ impl Ship {
     }
     fn aim_and_fire(&mut self) {
         if self.targets.is_empty() {
-            self.turn_to_target(-PI / 2.0);
+            turn_to(-PI / 2.0);
             return;
         } else if !self.fired {
             let fp = if let Some(f) = self.fp {
@@ -230,10 +232,11 @@ impl Ship {
             index
         };
         debug!("Firing at target {}", idx);
-        let target = &self.targets[idx];
+        let target = &mut self.targets[idx];
         let (target_heading, future_position) =
             lead_target(target.position, target.velocity, 4000.0);
-        self.turn_to_target(target_heading);
+        target.predicted_position = Some(future_position + position());
+        turn_to_target(target);
         let error = angle_diff(target_heading, heading());
         let miss_by = 2.0 * future_position.length() * error.sin();
         if miss_by.abs() < 20.0 && reload_ticks(0) == 0 {
@@ -279,32 +282,6 @@ impl Ship {
             self.radar_mode = FrigateRadarMode::FindNewTargets;
         }
     }
-    fn turn_to_target(&mut self, target_heading: f64) {
-        let error = angle_diff(target_heading, heading());
-        let last_heading = match self.current_target {
-            Some(current_target) => self.targets[current_target].last_heading,
-            None => None,
-        };
-        let tav_angular_velocity = match last_heading {
-            Some(last_target_heading) => (target_heading - last_target_heading) / TICK_LENGTH,
-            None => 0.0,
-        };
-        if let Some(current_target) = self.current_target {
-            self.targets[current_target].last_heading = Some(target_heading);
-        }
-        let time_to_stop =
-            (angular_velocity() - tav_angular_velocity).abs() / max_angular_acceleration();
-        let angle_while_stopping = (angular_velocity() - tav_angular_velocity) * time_to_stop
-            - 0.5 * max_angular_acceleration() * time_to_stop.powi(2) * error.signum();
-        let target_when_stopped = target_heading + time_to_stop * tav_angular_velocity;
-        let stopped_error = angle_diff(target_when_stopped, heading() + angle_while_stopping);
-        let applied_torque = max_angular_acceleration() * error.signum();
-        if stopped_error * error.signum() < 0.0 {
-            torque(applied_torque);
-        } else {
-            torque(-applied_torque);
-        }
-    }
     fn predict_turn(&self, target: TargetState) -> Vec2 {
         let dp = target.position - position();
         let dv = target.velocity - velocity();
@@ -322,6 +299,35 @@ impl Ship {
         }
         future_position
     }
+}
+fn turn_to_target(target: &mut TargetState) {
+    if target.predicted_position.is_none() {
+        return;
+    }
+    let target_heading = (target.predicted_position.unwrap() - position()).angle();
+    let last_heading = target.last_heading.unwrap_or(target_heading);
+    target.last_heading = Some(target_heading);
+    let delta_heading = angle_diff(target_heading, last_heading);
+    let av = angular_velocity() * TICK_LENGTH + delta_heading;
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+    let time_to_stop = av.abs() / aa;
+    let heading_when_stopped = heading() + av * time_to_stop
+        - 0.5 * aa * av.signum() * (time_to_stop.powi(2) + time_to_stop);
+    let av_next_tick = av + aa * av.signum();
+    let heading_next_tick = heading() + av_next_tick - aa * av.signum();
+    let time_to_stop_later = av_next_tick.abs() / aa;
+    let heading_when_stopped_later = heading_next_tick + av_next_tick * time_to_stop_later
+        - 0.5 * aa * (time_to_stop_later.powi(2) + time_to_stop_later) * av_next_tick.signum();
+    let error = angle_diff(target_heading, heading_when_stopped);
+    let error_later = angle_diff(target_heading, heading_when_stopped_later);
+    let error_per_tick =
+        (error * 2.0 / (time_to_stop.powi(2) + time_to_stop)) / TICK_LENGTH / TICK_LENGTH;
+    let accel = if error.signum() != error_later.signum() {
+        max_angular_acceleration() * error.signum() - error_per_tick
+    } else {
+        -max_angular_acceleration() * error.signum()
+    };
+    torque(accel);
 }
 
 fn time_to_turn_to(target_heading: f64) -> f64 {

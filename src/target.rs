@@ -143,8 +143,8 @@ impl Target {
             self.position - gun_position
         } else {
             let adjusted_position = future_position + gun_position + velocity() * time_to_target;
-            let angle = future_position.angle();
-            let miss_by = angle_diff(angle, heading()) * future_position.length();
+            // let angle = future_position.angle();
+            // let miss_by = angle_diff(angle, heading()) * future_position.length();
             // if reload_ticks(gun) == 0 && (miss_by.abs() < 10.0 || gun != 0) {
                 self.future_positions.push_back((
                     adjusted_position,
