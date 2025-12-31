@@ -1,7 +1,7 @@
 use oort_api::prelude::*;
 
 use crate::radar_state::RadarState;
-use crate::utils::{angle_at_distance, VecUtils};
+use crate::utils::{angle_at_distance, gun_offsets, VecUtils};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
@@ -14,7 +14,7 @@ impl TargetState {
     fn load_radar(&self) {
         let dp = self.position - position() + self.velocity * TICK_LENGTH;
         set_radar_heading(dp.angle());
-        set_radar_width(angle_at_distance(dp.length(), 50.0));
+        set_radar_width(angle_at_distance(dp.length(), 20.0));
         set_radar_max_distance(dp.length() + 20.0);
         set_radar_min_distance(dp.length() - 20.0);
     }
@@ -35,6 +35,7 @@ pub struct Ship {
     num_targets: usize,
     fired: bool,
     fp: Option<Vec2>,
+    shot_positions: Vec<Vec2>,
 }
 impl Default for Ship {
     fn default() -> Self {
@@ -53,6 +54,7 @@ impl Ship {
             num_targets: 4,
             fired: false,
             fp: None,
+            shot_positions: Vec::new(),
         }
     }
     pub fn tick(&mut self) {
@@ -77,6 +79,11 @@ impl Ship {
             }
         }
         self.aim_and_fire();
+        debug!("reload_ticks: {}", reload_ticks(0));
+        for p in &self.shot_positions {
+            draw_triangle(*p, 50.0, 0xff00ff);
+            draw_triangle(*p, 10.0, 0xff00ff);
+        }
     }
     fn update(&mut self) {
         if self.num_targets == 0 {
@@ -192,7 +199,7 @@ impl Ship {
                 position() + Vec2::angle_length(heading(), fp.length()),
                 0x00ff00,
             );
-            self.turn_to_fast((fp).angle());
+            self.turn_to_fast((fp).angle() - 0.0005);
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
                 self.targets[0].shots_fired += 1;
@@ -222,6 +229,7 @@ impl Ship {
             self.current_target = Some(index);
             index
         };
+        debug!("Firing at target {}", idx);
         let target = &self.targets[idx];
         let (target_heading, future_position) =
             lead_target(target.position, target.velocity, 4000.0);
@@ -230,6 +238,7 @@ impl Ship {
         let miss_by = 2.0 * future_position.length() * error.sin();
         if miss_by.abs() < 20.0 && reload_ticks(0) == 0 {
             fire(0);
+            self.shot_positions.push(future_position + position());
             self.current_target = None;
             self.targets[idx].shots_fired += 1;
             if self.num_targets > 0 {
@@ -259,7 +268,7 @@ impl Ship {
             self.update_index -= 1;
         }
         if self.update_index < self.targets.len()
-            && self.targets[self.update_index].observations < 5
+            && self.targets[self.update_index].observations < 7
         {
             self.targets[self.update_index].load_radar();
         } else if self.update_index + 1 < self.targets.len() {
