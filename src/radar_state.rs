@@ -42,6 +42,10 @@ impl RadarState {
         set_radar_min_distance(self.min_distance);
         set_radar_max_distance(self.max_distance);
     }
+    pub fn set_width(&mut self, width: f64) {
+        self.width = width;
+        set_radar_width(width);
+    }
 }
 
 impl Default for RadarState {

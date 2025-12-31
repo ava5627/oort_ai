@@ -1,12 +1,10 @@
 use oort_api::prelude::*;
 
-use crate::kalman_filter::KalmanFilter;
-use crate::target::Target;
 use crate::utils::{turn_to, VecUtils};
 
 pub struct Test {
-    kalman_filter: KalmanFilter,
-    target: Option<Target>,
+    target_heading: f64,
+    turning: bool,
 }
 impl Default for Test {
     fn default() -> Self {
@@ -16,58 +14,88 @@ impl Default for Test {
 
 impl Test {
     pub fn new() -> Test {
-        let enemy_x = 19000.0;
-        let enemy_y = -19000.0;
-        debug!("spawn fighter team 0 position (100, 0) heading 0");
-        debug!(
-            "spawn fighter team 1 position ({}, {}) heading 0",
-            enemy_x, enemy_y
-        );
+        debug!("spawn frigate team 0 position (100, 0) heading 0");
         Test {
-            kalman_filter: KalmanFilter::new(),
-            target: None,
+            target_heading: -5.5 * PI / 30.0,
+            turning: true,
         }
     }
     pub fn tick(&mut self) {
-        let (contact_position, contact_velocity, snr) = if let Some(contact) = scan() {
-            (contact.position, contact.velocity, contact.snr)
+        draw_line(
+            position(),
+            position() + Vec2::angle_length(self.target_heading, 1000.0),
+            0x00ff00,
+        );
+        draw_line(
+            position(),
+            position() + Vec2::angle_length(heading(), 1000.0),
+            0xff0000,
+        );
+        if self.turning {
+            self.turn_to(self.target_heading);
         } else {
-            set_radar_heading(radar_heading() - radar_width());
-            set_radar_width(TAU / 40.0);
-            set_radar_max_distance(1e100);
-            set_radar_min_distance(0.0);
-            return;
-        };
-
-        self.kalman_filter
-            .add_measurement(contact_position, contact_velocity, snr);
-        self.kalman_filter.run();
-        self.kalman_filter.point_radar();
-        let predicted_position = self.kalman_filter.predicted_position;
-        if let Some(target) = &mut self.target {
-            target.update(predicted_position, contact_velocity);
-        } else {
-            self.target = Some(Target::new(
-                predicted_position,
-                contact_velocity,
-                Class::Fighter,
-            ));
+            turn_to(self.target_heading);
         }
-        let target = self.target.as_mut().unwrap();
-        let prediciton = if position().distance(target.position) < 3000.0 {
-            target.lead(0)
-        } else {
-            target.position - position()
-        };
-        let angle = position().angle_to(prediciton);
-        turn_to(angle);
-        accelerate(Vec2::angle_length(angle, max_forward_acceleration()));
-        let miss_by = angle_diff(heading(), angle).abs() * prediciton.length();
-        if prediciton.length() < 3000.0 && miss_by < 20.0 {
+        let curr_error = angle_diff(self.target_heading, heading());
+        if curr_error.abs() < 0.01 && reload_ticks(0) == 0 {
             fire(0);
+            self.target_heading = rand(0.0, 2.0*PI);
+            self.turning = false;
         }
-        if angle_diff(heading(), angle).abs() < PI / 10.0 {
-            activate_ability(Ability::Boost);
-        }
+    }
+
+    fn turn_to(&mut self, target_heading: f64) {
+        let av = angular_velocity() * TICK_LENGTH;
+        let curr_error = angle_diff(target_heading, heading());
+        let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+        debug!("angular velocity: {}", av);
+
+        // let passed = (((8.0 * target_heading / aa + 1.0).sqrt() - 1.0) / 2.0).ceil();
+        let passed1 = ((-(aa / 2.0 + av)
+            + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt())
+            / aa)
+            .ceil()
+            .abs();
+        let passed2 = ((-(aa / 2.0 + av)
+            - ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt())
+            / aa)
+            .ceil()
+            .abs();
+        let (passed, accel_sign) = if passed1 < passed2 {
+            (passed1, curr_error.signum())
+        } else {
+            (passed2, -curr_error.signum())
+        };
+        let heading_when_stopped =
+            heading() + av * passed + aa * accel_sign * (passed.powi(2) + passed) / 2.0;
+        let error = angle_diff(target_heading, heading_when_stopped).abs();
+        let error_per_tick = error * 2.0 / (passed.powi(2) + passed);
+        let accel =
+            (max_angular_acceleration() - error_per_tick / TICK_LENGTH / TICK_LENGTH) * accel_sign;
+        torque(accel);
+        debug!("target_heading: {}", target_heading);
+        debug!("ticks to target heading: {}", passed);
+        debug!("heading when stopped: {}", heading_when_stopped);
+        debug!("curr_error: {}", curr_error);
+        debug!("error: {}", error);
+        debug!("error_per_tick: {}", error_per_tick);
+        debug!("ept: {}", error_per_tick/ TICK_LENGTH / TICK_LENGTH);
+        draw_line(
+            position(),
+            position() + Vec2::angle_length(heading_when_stopped, 1000.0),
+            0x00ffff,
+        );
+        debug!("heading: {}", heading());
+        debug!("max angular acceleration: {}", max_angular_acceleration() * accel_sign);
+        debug!("applied angular acceleration: {}", accel);
+        let aa = accel * TICK_LENGTH * TICK_LENGTH * accel_sign;
+        let heading_when_stopped_real =
+            heading() + av * passed + aa * (passed.powi(2) + passed) / 2.0 * accel_sign;
+        debug!("heading_when_stopped_real: {}", heading_when_stopped_real);
+        draw_line(
+            position(),
+            position() + Vec2::angle_length(heading_when_stopped_real, 1000.0),
+            0xffff00,
+        );
     }
 }

@@ -11,6 +11,7 @@ pub mod rotation;
 pub mod search;
 pub mod squad;
 pub mod testing;
+pub mod sandbox;
 
 use self::testing::Test;
 use oort_api::prelude::*;

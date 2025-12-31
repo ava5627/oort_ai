@@ -1,14 +1,13 @@
 use oort_api::prelude::*;
 
-use crate::{radar_state::RadarState, utils::angle_at_distance};
+use crate::radar_state::RadarState;
+use crate::utils::{angle_at_distance, VecUtils};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
     velocity: Vec2,
     last_heading: Option<f64>,
-    class: Class,
     shots_fired: usize,
-    time_since_tracked: usize,
 }
 impl TargetState {
     fn load_radar(&self) {
@@ -32,7 +31,8 @@ pub struct Ship {
     radar_mode: FrigateRadarMode,
     scan_radar: RadarState,
     num_targets: usize,
-    num_targets_found: usize,
+    fired: bool,
+    fp: Option<Vec2>,
 }
 impl Default for Ship {
     fn default() -> Self {
@@ -49,17 +49,19 @@ impl Ship {
             radar_mode: FrigateRadarMode::FindNewTargets,
             scan_radar: RadarState::new(),
             num_targets: 4,
-            num_targets_found: 0,
+            fired: false,
+            fp: None,
         }
     }
     pub fn tick(&mut self) {
         if current_tick() == 0 {
             set_radar_heading(349.0 * PI / 180.0);
         }
+        self.update();
         if self.num_targets == 0 {
             torque(max_angular_acceleration());
             set_radar_heading(radar_heading() + radar_width() / 2.0);
-            set_radar_width(TAU / 4.0);
+            self.scan_radar.set_width(TAU / 4.0);
             return;
         } else if self.radar_mode == FrigateRadarMode::FindNewTargets {
             self.find_targets();
@@ -69,18 +71,18 @@ impl Ship {
         debug!("num_targets remaining: {}", self.num_targets);
         debug!("num_targets: {}", self.targets.len());
         self.aim_and_fire();
-        self.update();
     }
     fn update(&mut self) {
         for (i, t) in self.targets.iter_mut().enumerate() {
             t.position += t.velocity * TICK_LENGTH;
             draw_polygon(t.position, 50.0, 8, 0.0, 0xffffff);
+            draw_square(t.position, 10.0, 0xffffff);
             draw_text!(t.position, 0xffffff, "{:?}", i);
         }
     }
     fn find_targets(&mut self) {
         if let Some(contact) = scan() {
-            self.new_target(contact.position, contact.velocity, contact.class);
+            self.new_target(contact.position, contact.velocity);
             set_radar_min_distance(position().distance(contact.position) + 100.0);
             return;
         } else {
@@ -110,7 +112,7 @@ impl Ship {
             new_heading = top_angle;
         }
         set_radar_heading(new_heading);
-        set_radar_width(TAU / 360.0);
+        self.scan_radar.set_width(TAU / 360.0);
         self.scan_radar.save();
         if !self.targets.is_empty() {
             self.targets[0].load_radar();
@@ -121,13 +123,10 @@ impl Ship {
             self.radar_mode = FrigateRadarMode::FindNewTargets;
         }
     }
-    fn new_target(&mut self, new_position: Vec2, new_velocity: Vec2, new_class: Class) -> bool {
-        if new_class == Class::Missile || new_class == Class::Torpedo {
-            return false;
-        }
+    fn new_target(&mut self, new_position: Vec2, new_velocity: Vec2) -> bool {
         for t in &self.targets {
             let distance = (new_position - t.position).length();
-            if t.class == new_class && distance < 20.0 {
+            if distance < 20.0 {
                 return false;
             }
         }
@@ -135,17 +134,35 @@ impl Ship {
             position: new_position,
             velocity: new_velocity,
             last_heading: None,
-            class: new_class,
             shots_fired: 0,
-            time_since_tracked: 0,
         };
         self.targets.push(t);
-        self.num_targets_found += 1;
         true
     }
     fn aim_and_fire(&mut self) {
         if self.targets.is_empty() {
             self.turn_to_target(-PI / 2.0);
+            return;
+        } else if !self.fired {
+            let fp = if let Some(f) = self.fp {
+                f
+            } else {
+                self.predict_turn(self.targets[0].clone())
+            };
+            self.fp = Some(fp);
+            draw_triangle(fp + position(), 150.0, 0xff0000);
+            draw_line(position(), fp + position(), 0xff0000);
+            draw_line(
+                position(),
+                position() + Vec2::angle_length(heading(), fp.length()),
+                0x00ff00,
+            );
+            self.turn_to_fast((fp).angle());
+            if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
+                fire(0);
+                self.targets[0].shots_fired += 1;
+                self.fired = true;
+            }
             return;
         }
         let idx = if let Some(t) = self.current_target {
@@ -160,12 +177,9 @@ impl Ship {
                 .iter()
                 .enumerate()
                 .min_by(|(_, a), (_, b)| {
-                    a.shots_fired.cmp(&b.shots_fired).then(
-                        a.velocity
-                            .partial_cmp(&b.velocity)
-                            .unwrap()
-                            .reverse(),
-                    )
+                    a.shots_fired
+                        .cmp(&b.shots_fired)
+                        .then(a.velocity.partial_cmp(&b.velocity).unwrap().reverse())
                 })
                 .unwrap()
                 .0;
@@ -189,20 +203,9 @@ impl Ship {
     }
     fn update_targets(&mut self) {
         if let Some(contact) = scan() {
-            if contact.class == Class::Missile || contact.class == Class::Torpedo {
-                if self.update_index + 1 < self.targets.len() {
-                    self.update_index += 1;
-                    self.targets[self.update_index].load_radar();
-                } else {
-                    self.scan_radar.restore();
-                    self.radar_mode = FrigateRadarMode::FindNewTargets;
-                }
-                return;
-            }
             let target = &mut self.targets[self.update_index];
             target.position = contact.position;
             target.velocity = contact.velocity;
-            target.class = contact.class;
         } else {
             self.targets.remove(self.update_index);
             if let Some(current_target) = self.current_target {
@@ -252,6 +255,58 @@ impl Ship {
             torque(-applied_torque);
         }
     }
+
+    fn turn_to_fast(&mut self, target_heading: f64) {
+        let av = angular_velocity() * TICK_LENGTH;
+        let curr_error = angle_diff(target_heading, heading());
+        let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+
+        // let passed = (((8.0 * target_heading / aa + 1.0).sqrt() - 1.0) / 2.0).ceil();
+        let accel_sign = curr_error.signum() * -1.0;
+        let passed = ((-(aa / 2.0 + av)
+            + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
+            / aa)
+            .ceil()
+            .abs();
+        let heading_when_stopped =
+            heading() + av * passed + aa * accel_sign * (passed.powi(2) + passed) / 2.0;
+        let error = angle_diff(target_heading, heading_when_stopped).abs();
+        let error_per_tick = error * 2.0 / (passed.powi(2) + passed);
+        let accel =
+            (max_angular_acceleration() - error_per_tick / TICK_LENGTH / TICK_LENGTH) * accel_sign;
+        torque(accel);
+    }
+    fn predict_turn(&self, target: TargetState) -> Vec2 {
+        let dp = target.position - position();
+        let dv = target.velocity - velocity();
+        let time_to_target = dp.length() / 4000.0;
+        let mut future_position = dp + dv * time_to_target;
+        for _ in 0..100 {
+            let turn_time = time_to_turn_to(future_position.angle());
+            let time_to_target = (future_position.length() - 40.0) / 4000.0;
+            let new_future_position = dp + dv * (time_to_target + turn_time);
+            let delta = new_future_position.distance(future_position);
+            future_position = new_future_position;
+            if delta < 1e-3 {
+                break;
+            }
+        }
+        future_position
+    }
+}
+
+fn time_to_turn_to(target_heading: f64) -> f64 {
+    let av = angular_velocity() * TICK_LENGTH;
+    let curr_error = angle_diff(target_heading, heading());
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+
+    let accel_sign = curr_error.signum() * -1.0;
+    let passed = ((-(aa / 2.0 + av)
+        + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
+        / aa)
+        .ceil()
+        .abs();
+    passed * TICK_LENGTH
 }
 fn lead_target(target_position: Vec2, target_velocity: Vec2, bullet_speed: f64) -> (f64, Vec2) {
     let dp = target_position - position();
