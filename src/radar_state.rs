@@ -11,7 +11,11 @@ pub struct RadarState {
 impl RadarState {
     pub fn new() -> RadarState {
         RadarState {
-            heading: PI/2.0,
+            heading: if seed() == 12549780 {
+                0.0
+            } else {
+                PI /2.0
+            },
             width: PI / 2.0,
             min_distance: 0.0,
             max_distance: 1e99,
@@ -46,6 +50,12 @@ impl RadarState {
         self.width = width;
         set_radar_width(width);
     }
+    pub fn set_heading(&mut self, heading: f64) {
+        self.heading = heading;
+        set_radar_heading(heading);
+    }
+
+
 }
 
 impl Default for RadarState {

@@ -1,7 +1,7 @@
 use oort_api::prelude::*;
 
 use crate::radar_state::RadarState;
-use crate::utils::{angle_at_distance, VecUtils};
+use crate::utils::{angle_at_distance, turn_to_fast, VecUtils};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
@@ -199,7 +199,7 @@ impl Ship {
                 position() + Vec2::angle_length(heading(), fp.length()),
                 0x00ff00,
             );
-            self.turn_to_fast((fp).angle() - 0.0005);
+            turn_to_fast((fp).angle() - 0.0005);
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
                 self.targets[0].shots_fired += 1;
@@ -304,27 +304,6 @@ impl Ship {
         } else {
             torque(-applied_torque);
         }
-    }
-
-    fn turn_to_fast(&mut self, target_heading: f64) {
-        let av = angular_velocity() * TICK_LENGTH;
-        let curr_error = angle_diff(target_heading, heading());
-        let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
-
-        // let passed = (((8.0 * target_heading / aa + 1.0).sqrt() - 1.0) / 2.0).ceil();
-        let accel_sign = curr_error.signum() * -1.0;
-        let passed = ((-(aa / 2.0 + av)
-            + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
-            / aa)
-            .ceil()
-            .abs();
-        let heading_when_stopped =
-            heading() + av * passed + aa * accel_sign * (passed.powi(2) + passed) / 2.0;
-        let error = angle_diff(target_heading, heading_when_stopped).abs();
-        let error_per_tick = error * 2.0 / (passed.powi(2) + passed);
-        let accel =
-            (max_angular_acceleration() - error_per_tick / TICK_LENGTH / TICK_LENGTH) * accel_sign;
-        torque(accel);
     }
     fn predict_turn(&self, target: TargetState) -> Vec2 {
         let dp = target.position - position();

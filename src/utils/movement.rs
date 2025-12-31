@@ -60,6 +60,49 @@ pub fn turn_to_simple(target_heading: f64) {
     turn(10.0 * error);
 }
 
+pub fn turn_to_faster(target_heading: f64) {
+    let av = angular_velocity() * TICK_LENGTH;
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+    let time_to_stop = av.abs() / aa;
+    let heading_when_stopped =
+        heading() + av * time_to_stop - 0.5 * aa * av.signum() * (time_to_stop.powi(2) + time_to_stop);
+    let av_next_tick = av + aa * av.signum();
+    let heading_next_tick = heading() + av_next_tick - aa * av.signum();
+    let time_to_stop_later = av_next_tick.abs() / aa;
+    let heading_when_stopped_later = heading_next_tick + av_next_tick * time_to_stop_later
+        - 0.5 * aa * (time_to_stop_later.powi(2) + time_to_stop_later) * av_next_tick.signum();
+    let error = angle_diff(target_heading, heading_when_stopped);
+    let error_later = angle_diff(target_heading, heading_when_stopped_later);
+    let error_per_tick =
+        (error * 2.0 / (time_to_stop.powi(2) + time_to_stop)) / TICK_LENGTH / TICK_LENGTH;
+    let accel = if error.signum() != error_later.signum() {
+        max_angular_acceleration() * error.signum() - error_per_tick
+    } else {
+        -max_angular_acceleration() * error.signum()
+    };
+    torque(accel);
+}
+
+pub fn turn_to_fast(target_heading: f64) {
+    let av = angular_velocity() * TICK_LENGTH;
+    let curr_error = angle_diff(target_heading, heading());
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+
+    // let passed = (((8.0 * target_heading / aa + 1.0).sqrt() - 1.0) / 2.0).ceil();
+    let accel_sign = curr_error.signum() * -1.0;
+    let passed = ((-(aa / 2.0 + av)
+        + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
+        / aa)
+        .ceil()
+        .abs();
+    let heading_when_stopped =
+        heading() + av * passed + aa * accel_sign * (passed.powi(2) + passed) / 2.0;
+    let error = angle_diff(target_heading, heading_when_stopped).abs();
+    let error_per_tick = error * 2.0 / (passed.powi(2) + passed);
+    let accel =
+        (max_angular_acceleration() - error_per_tick / TICK_LENGTH / TICK_LENGTH) * accel_sign;
+    torque(accel);
+}
 pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
     target_width / distance
 }
