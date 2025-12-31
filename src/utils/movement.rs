@@ -69,7 +69,7 @@ pub fn turn_to_faster(target: &Target) {
     let av = if nf >= 2 {
         let last_heading = (target.future_positions[nf-2].0 - position()).angle();
         let delta_heading = angle_diff(target_heading, last_heading);
-        angular_velocity() * TICK_LENGTH - delta_heading * TICK_LENGTH
+        angular_velocity() * TICK_LENGTH + delta_heading
     } else {
         angular_velocity() * TICK_LENGTH
     };
