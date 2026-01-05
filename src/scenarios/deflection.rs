@@ -1,7 +1,7 @@
 use oort_api::prelude::*;
 
 use crate::target::Target;
-use crate::utils::turn_to;
+use crate::utils::{turn_to, turn_to_target};
 pub struct Ship {
     target: Target,
 }
@@ -16,13 +16,15 @@ impl Ship {
         let predicted_position = self.target.lead(0);
         self.target.draw_path();
         let angle = predicted_position.angle();
-        turn_to(angle);
         if angle_diff(heading(), angle).abs() < PI / 10.0 {
             activate_ability(Ability::Boost);
         }
         let miss_by = angle_diff(heading(), angle) * predicted_position.length();
-        if miss_by.abs() < 10.0 {
+        if miss_by.abs() < 11.0 {
             fire(0);
+            turn_to(angle);
+        } else {
+            turn_to_target(&self.target);
         }
         accelerate(predicted_position);
     }

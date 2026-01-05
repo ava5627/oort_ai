@@ -2,7 +2,7 @@
 // Fly through the target circle.
 use oort_api::prelude::*;
 
-use crate::utils::{best_acceleration, boost, max_accelerate, turn_to};
+use crate::utils::{best_acceleration, boost, max_accelerate, turn_to_simple};
 
 pub struct Ship {}
 
@@ -22,7 +22,7 @@ impl Ship {
         debug!("{}", current_tick());
         boost(true, &mut None);
         let ma = best_acceleration(heading());
-        turn_to(-ma.angle());
+        turn_to_simple(-ma.angle());
         max_accelerate(ma);
     }
 }
