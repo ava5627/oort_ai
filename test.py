@@ -34,7 +34,7 @@ def run_oort(scenario_name, source_path, enemy_path):
         enemy_path.as_posix(),
     ]
     output = subprocess.check_output(
-        " ".join(cmd), shell=True, text=True, env={"RUST_LOG": "error"}
+        " ".join(cmd), shell=True, text=True, env={"RUST_LOG": "error", "RUST_BACKTRACE": "1"}
     )
     return json.loads(output)[0]
 

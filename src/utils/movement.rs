@@ -83,7 +83,6 @@ pub fn turn_to_target(target: &Target) {
         return;
     }
     let target_heading = (target.future_positions[nf - 1].0 - position()).angle();
-    draw_square(target.future_positions[nf - 1].0, 50.0, 0xff0000);
     let av = if nf >= 2 {
         let last_heading = (target.future_positions[nf - 2].0 - position()).angle();
         let delta_heading = angle_diff(last_heading, target_heading);
