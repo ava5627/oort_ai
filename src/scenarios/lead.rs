@@ -1,6 +1,6 @@
 use oort_api::prelude::*;
 use crate::target::Target;
-use crate::utils::{turn_to_simple, turn_to_target, VecUtils};
+use crate::utils::{turn_to, turn_to_target, VecUtils};
 pub struct Ship {
     target: Target,
 }
@@ -33,7 +33,7 @@ impl Ship {
 
         if miss_by.abs() < 10.0 {
             fire(0);
-            turn_to_simple(angle);
+            turn_to(angle);
         } else {
             turn_to_target(&self.target);
         }
