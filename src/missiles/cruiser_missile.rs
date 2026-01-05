@@ -100,7 +100,7 @@ impl Missile for CruiserMissile {
         let dv = target.velocity - velocity();
         debug!("dp {:>8.3}", dp.length());
         debug!("dv {:>8.3}", dv.length());
-        if dp.length() < 140.0 {
+        if dp.length() < 150.0 {
             explode();
         }
         let error = angle_diff(dp.angle(), heading()).abs();
