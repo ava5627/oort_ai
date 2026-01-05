@@ -1,6 +1,6 @@
 use oort_api::prelude::*;
 use crate::target::Target;
-use crate::utils::{turn_to, VecUtils};
+use crate::utils::{turn_to_simple, turn_to_target, VecUtils};
 pub struct Ship {
     target: Target,
 }
@@ -28,10 +28,14 @@ impl Ship {
             0x00ff00,
         );
         let angle = predicted_position.angle();
-        turn_to(angle);
         let miss_by = angle_diff(heading(), angle) * predicted_position.length();
-        if miss_by.abs() < 15.0 {
+        debug!("miss_by {:?}", miss_by);
+
+        if miss_by.abs() < 10.0 {
             fire(0);
+            turn_to_simple(angle);
+        } else {
+            turn_to_target(&self.target);
         }
     }
 }

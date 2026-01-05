@@ -1,7 +1,6 @@
-use crate::pid::PID;
 use crate::radar_state::RadarState;
 use crate::target::Target;
-use crate::utils::turn_to_faster;
+use crate::utils::{turn_to, turn_to_target, VecUtils};
 use maths_rs::num::Cast;
 use oort_api::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,7 +13,6 @@ pub struct Frigate {
     index: usize,
     radar_mode: FrigateRadarMode,
     scan_radar: RadarState,
-    pid: PID,
     found_all_targets: bool,
 }
 impl Default for Frigate {
@@ -30,13 +28,6 @@ impl Frigate {
             index: 0,
             radar_mode: FrigateRadarMode::FindNewTargets,
             scan_radar: RadarState::new(),
-            pid: PID::new(
-                12.0,
-                0.0,
-                6.0,
-                max_angular_acceleration(),
-                max_angular_acceleration(),
-            ),
             found_all_targets: false,
         }
     }
@@ -175,11 +166,15 @@ impl Frigate {
                 let prediction = target.lead(weapon_idx);
                 let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
-                turn_to_faster(target);
+                draw_line(position(), position() + Vec2::angle_length(heading(), prediction.length()), 0xffffff);
+                if reload_ticks(weapon_idx) > 0 {
+                    turn_to_target(target);
+                } else {
+                    turn_to(angle);
+                }
                 debug!("Miss by {}", miss_by);
                 if miss_by.abs() < 6.0 && reload_ticks(weapon_idx) == 0 {
                     fire(weapon_idx);
-                    self.pid.reset();
                     target.shots_fired += 1;
                 }
             } else if weapon_idx == 3 {

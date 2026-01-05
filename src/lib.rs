@@ -3,7 +3,6 @@ pub mod scenarios;
 pub mod cruiser;
 pub mod fighter;
 pub mod frigate;
-pub mod pid;
 pub mod radar_state;
 pub mod ship;
 pub mod target;

@@ -41,7 +41,7 @@ pub fn max_accelerate(a: Vec2) {
 }
 
 /// Turns the ship by applying torque to reach the target heading in the shortest time.
-pub fn turn_to(target_heading: f64) {
+pub fn turn_to_simple(target_heading: f64) {
     let error = angle_diff(target_heading, heading());
     let time_to_stop = angular_velocity().abs() / max_angular_acceleration();
     let angle_while_stopping =
@@ -54,29 +54,12 @@ pub fn turn_to(target_heading: f64) {
         torque(-applied_torque);
     }
 }
-
-pub fn turn_to_simple(target_heading: f64) {
-    let error = angle_diff(heading(), target_heading);
-    turn(10.0 * error);
-}
-
-pub fn turn_to_faster(target: &Target) {
-    let nf = target.future_positions.len();
-    if nf == 0 {
-        return;
-    }
-    let target_heading = (target.future_positions[nf-1].0 - position()).angle();
-    let av = if nf >= 2 {
-        let last_heading = (target.future_positions[nf-2].0 - position()).angle();
-        let delta_heading = angle_diff(target_heading, last_heading);
-        angular_velocity() * TICK_LENGTH - delta_heading * TICK_LENGTH
-    } else {
-        angular_velocity() * TICK_LENGTH
-    };
+pub fn turn_to(target_heading: f64) {
+    let av = angular_velocity() * TICK_LENGTH;
     let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
     let time_to_stop = av.abs() / aa;
-    let heading_when_stopped =
-        heading() + av * time_to_stop - 0.5 * aa * av.signum() * (time_to_stop.powi(2) + time_to_stop);
+    let heading_when_stopped = heading() + av * time_to_stop
+        - 0.5 * aa * av.signum() * (time_to_stop.powi(2) + time_to_stop);
     let av_next_tick = av + aa * av.signum();
     let heading_next_tick = heading() + av_next_tick - aa * av.signum();
     let time_to_stop_later = av_next_tick.abs() / aa;
@@ -94,7 +77,42 @@ pub fn turn_to_faster(target: &Target) {
     torque(accel);
 }
 
-pub fn turn_to_fast(target_heading: f64) {
+pub fn turn_to_target(target: &Target) {
+    let nf = target.future_positions.len();
+    if nf == 0 {
+        return;
+    }
+    let target_heading = (target.future_positions[nf - 1].0 - position()).angle();
+    draw_square(target.future_positions[nf - 1].0, 50.0, 0xff0000);
+    let av = if nf >= 2 {
+        let last_heading = (target.future_positions[nf - 2].0 - position()).angle();
+        let delta_heading = angle_diff(last_heading, target_heading);
+        angular_velocity() * TICK_LENGTH - delta_heading
+    } else {
+        angular_velocity() * TICK_LENGTH
+    };
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+    let time_to_stop = av.abs() / aa;
+    let heading_when_stopped = heading() + av * time_to_stop
+        - 0.5 * aa * av.signum() * (time_to_stop.powi(2) + time_to_stop);
+    let av_next_tick = av + aa * av.signum();
+    let heading_next_tick = heading() + av_next_tick - aa * av.signum();
+    let time_to_stop_later = av_next_tick.abs() / aa;
+    let heading_when_stopped_later = heading_next_tick + av_next_tick * time_to_stop_later
+        - 0.5 * aa * (time_to_stop_later.powi(2) + time_to_stop_later) * av_next_tick.signum();
+    let error = angle_diff(target_heading, heading_when_stopped);
+    let error_later = angle_diff(target_heading, heading_when_stopped_later);
+    let error_per_tick =
+        (error * 2.0 / (time_to_stop.powi(2) + time_to_stop)) / TICK_LENGTH / TICK_LENGTH;
+    let accel = if error.signum() != error_later.signum() {
+        max_angular_acceleration() * error.signum() - error_per_tick
+    } else {
+        -max_angular_acceleration() * error.signum()
+    };
+    torque(accel);
+}
+
+pub fn turn_to_no_stop(target_heading: f64) {
     let av = angular_velocity() * TICK_LENGTH;
     let curr_error = angle_diff(target_heading, heading());
     let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
@@ -141,5 +159,5 @@ pub fn final_approach(target: &Target) {
     let rand_dir = rand(-1.0, 1.0).signum();
     let ma = vec2(ma.x, -ma.y * rand_dir);
     max_accelerate(ma.rotate(dp.angle()));
-    turn_to(dp.angle());
+    turn_to_simple(dp.angle());
 }

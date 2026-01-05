@@ -1,7 +1,7 @@
 use oort_api::prelude::*;
 
 use crate::radar_state::RadarState;
-use crate::utils::{angle_at_distance, turn_to, turn_to_fast, VecUtils};
+use crate::utils::{angle_at_distance, turn_to, turn_to_no_stop, VecUtils};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetState {
     position: Vec2,
@@ -201,7 +201,7 @@ impl Ship {
                 position() + Vec2::angle_length(heading(), fp.length()),
                 0x00ff00,
             );
-            turn_to_fast((fp).angle() - 0.0005);
+            turn_to_no_stop((fp).angle() - 0.0005);
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
                 self.targets[0].shots_fired += 1;

@@ -12,7 +12,6 @@ pub struct Cruiser {
     targets: Vec<Target>,
     tentative_target: TentativeTarget,
     index: usize,
-    radar_mode: CruiserRadarMode,
 }
 impl Default for Cruiser {
     fn default() -> Self {
@@ -26,7 +25,6 @@ impl Cruiser {
             targets: Vec::new(),
             tentative_target: TentativeTarget::new(),
             index: 0,
-            radar_mode: CruiserRadarMode::FindNewTargets,
         }
     }
     pub fn tick(&mut self) {
@@ -35,7 +33,6 @@ impl Cruiser {
         send_class_and_position();
         debug!("targets {:?}", self.targets.len());
         debug!("index {:?}", self.index);
-        debug!("radar_mode {:?}", self.radar_mode);
         fire(1);
         fire(2);
         fire(3);

@@ -1,4 +1,3 @@
-use crate::pid::PID;
 use crate::utils::VecUtils;
 use crate::utils::{angle_at_distance, draw_curve, draw_heading, send_class_and_position, turn_to};
 use oort_api::prelude::*;
@@ -9,22 +8,13 @@ pub struct Fighter {
     accelerations: VecDeque<Vec2>,
     predictions: VecDeque<Vec2>,
     real_positions: VecDeque<Vec2>,
-    pid: PID,
 }
 impl Fighter {
     pub fn new() -> Fighter {
-        let pid = PID::new(
-            50.0,
-            0.0,
-            1000.0 / 60.0,
-            max_angular_acceleration(),
-            max_angular_acceleration(),
-        );
         Fighter {
             move_to: position(),
             last_velocity: None,
             accelerations: VecDeque::new(),
-            pid,
             predictions: VecDeque::new(),
             real_positions: VecDeque::new(),
         }
@@ -43,7 +33,6 @@ impl Fighter {
         } else {
             fire(0);
             set_radar_heading(radar_heading() + radar_width());
-            self.pid.reset();
             self.last_velocity = None;
             self.accelerations.clear();
             set_radar_width(TAU / 30.0);

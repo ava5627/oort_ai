@@ -1,6 +1,6 @@
 use oort_api::prelude::*;
 
-use crate::utils::{angle_at_distance, turn_to};
+use crate::utils::{angle_at_distance, turn_to, turn_to_simple};
 const BULLET_SPEED: f64 = 1000.0;
 pub struct Ship {
     fighter: Fighter,
@@ -103,7 +103,7 @@ impl Fighter {
                 turn_to(angle);
             } else {
                 let random_offset = rand(-1.0, 1.0) * TAU / 162.0;
-                turn_to(random_offset);
+                turn_to_simple(random_offset);
                 accelerate(contact.position);
             }
             self.last_vel = contact.velocity - velocity();
@@ -190,9 +190,9 @@ impl Missile {
         let a = vec2(400.0, 0.0).rotate(a.angle());
         accelerate(a);
         if dp.length() > 300.0 && fuel() > 0.0 {
-            turn_to(a.angle());
+            turn_to_simple(a.angle());
         } else {
-            turn_to(dp.angle());
+            turn_to_simple(dp.angle());
         }
         if dp.length() < 300.0 {
             explode();
