@@ -1,7 +1,7 @@
 use oort_api::prelude::*;
 
 use crate::target::Target;
-use crate::utils::{turn_to, turn_to_simple, VecUtils};
+use crate::utils::{turn_to_simple, VecUtils};
 pub struct Ship {
     target: Target,
 }
@@ -33,7 +33,6 @@ impl Ship {
             self.target.update(pos, vel);
         }
         self.target.tick(0);
-        self.target.draw_path();
         let prediction = self.target.lead(0);
         let angle = prediction.angle();
         turn_to_simple(angle);

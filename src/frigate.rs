@@ -167,7 +167,7 @@ impl Frigate {
                 let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
                 draw_line(position(), position() + Vec2::angle_length(heading(), prediction.length()), 0xffffff);
-                if reload_ticks(weapon_idx) > 0 {
+                if reload_ticks(weapon_idx) > 10 {
                     turn_to_target(target);
                 } else {
                     turn_to(angle);

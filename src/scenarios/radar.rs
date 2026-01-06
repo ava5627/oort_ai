@@ -10,7 +10,6 @@
 use oort_api::prelude::*;
 
 use crate::target::Target;
-use crate::utils::turn_to;
 use crate::utils::turn_to_target;
 use crate::utils::VecUtils;
 pub struct Ship {

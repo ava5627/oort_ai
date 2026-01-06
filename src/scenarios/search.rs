@@ -34,7 +34,6 @@ impl Ship {
                 ));
             } else if let Some(target) = &mut self.target {
                 target.update(self.kalman_filter.predicted_position, contact.velocity);
-                target.draw_path();
             }
         } else {
             self.kalman_filter.reset();
