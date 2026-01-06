@@ -82,10 +82,13 @@ pub fn turn_to_target(target: &Target) {
     if nf == 0 {
         return;
     }
-    let target_heading = (target.future_positions[nf - 1].0 - position()).angle();
+    debug!("fp -1: {}", target.future_positions[nf - 1].0);
+    let target_heading = (target.future_positions[nf - 1].0).angle();
+    debug!("target_heading: {}", target_heading);
     let av = if nf >= 2 {
-        let last_heading = (target.future_positions[nf - 2].0 - position()).angle();
+        let last_heading = (target.future_positions[nf - 2].0).angle();
         let delta_heading = angle_diff(last_heading, target_heading);
+        debug!("delta_heading: {}", delta_heading / TICK_LENGTH);
         angular_velocity() * TICK_LENGTH - delta_heading
     } else {
         angular_velocity() * TICK_LENGTH

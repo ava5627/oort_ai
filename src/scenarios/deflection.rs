@@ -14,7 +14,6 @@ impl Ship {
     pub fn tick(&mut self) {
         self.target.update(target(), target_velocity());
         let predicted_position = self.target.lead(0);
-        self.target.draw_path();
         let angle = predicted_position.angle();
         if angle_diff(heading(), angle).abs() < PI / 10.0 {
             activate_ability(Ability::Boost);

@@ -147,7 +147,7 @@ impl Target {
             // let miss_by = angle_diff(angle, heading()) * future_position.length();
             if gun == 0 {
                 self.future_positions.push_back((
-                    adjusted_position,
+                    future_position,
                     current_tick() + (time_to_target / TICK_LENGTH) as u32,
                 ));
             }

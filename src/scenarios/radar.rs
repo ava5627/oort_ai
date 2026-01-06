@@ -11,6 +11,7 @@ use oort_api::prelude::*;
 
 use crate::target::Target;
 use crate::utils::turn_to;
+use crate::utils::turn_to_target;
 use crate::utils::VecUtils;
 pub struct Ship {
     target: Option<Target>,
@@ -41,9 +42,13 @@ impl Ship {
         }
         if let Some(target) = &mut self.target {
             let prediction = target.lead(0);
+            debug!("prediction: {:?}", prediction);
             let angle = prediction.angle();
-            turn_to(angle);
-            let miss_by = angle_diff(angle, heading()) * prediction.length();
+            debug!("angle: {}", angle);
+            turn_to_target(&target);
+            let miss_by = angle_diff(heading(), angle) * prediction.length();
+            draw_line(position(), position() + Vec2::angle_length(heading(), prediction.length()), 0xFF0000);
+            debug!("Miss by: {}", miss_by);
             if miss_by.abs() < 18.0 {
                 fire(0);
             }
