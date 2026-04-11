@@ -29,7 +29,6 @@ impl Cruiser {
         }
     }
     pub fn tick(&mut self) {
-        debug!("seed: {}", seed());
         select_radio(7);
         set_radio_channel(9);
         send_class_and_position();

@@ -21,13 +21,14 @@ impl RadarState {
     }
 
     pub fn rotate(&mut self) {
-        set_radar_min_distance(0.0);
-        set_radar_heading(self.heading + self.width);
-        if self.rotations > self.turns * 4 {
+        if self.rotations >= self.turns * 4 {
             self.rotations = 0;
             self.turns += 1;
             self.width /= 2.0;
+            self.heading += self.width / 2.0;
         }
+        set_radar_min_distance(0.0);
+        set_radar_heading(self.heading + self.width);
         self.rotations += 1;
     }
     pub fn save(&mut self) {
