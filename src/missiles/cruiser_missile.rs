@@ -1,7 +1,9 @@
 use crate::missiles::Missile;
 use crate::target::Target;
 use crate::utils::angle_at_distance;
-use crate::utils::final_approach;
+use crate::utils::best_acceleration;
+use crate::utils::boost_max_acceleration;
+use crate::utils::max_accelerate;
 use crate::utils::{boost, seek, turn_to};
 use oort_api::prelude::*;
 pub struct CruiserMissile {
@@ -92,10 +94,13 @@ impl Missile for CruiserMissile {
         }
         let target = self.target.as_ref().unwrap();
         let dp = target.position - position();
-        if dp.length() > 500.0 {
+        let dv = target.velocity - velocity();
+        if dp.length() > 350.0 {
             seek(target);
         } else {
-            final_approach(target);
+            let future_pos = dp + dv * (4.0 * TICK_LENGTH);
+            accelerate(future_pos);
+            turn_to(future_pos.angle());
         }
         let dv = target.velocity - velocity();
         debug!("dp {:>8.3}", dp.length());

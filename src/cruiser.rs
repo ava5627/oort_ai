@@ -1,4 +1,5 @@
-use crate::target::{Target, TentativeTarget};
+use crate::radar_state::RadarState;
+use crate::target::Target;
 use crate::utils::{angle_at_distance, send_class_and_position};
 use oort_api::prelude::*;
 const TURRET_BULLET_SPEED: f64 = 2000.0;
@@ -10,7 +11,7 @@ pub enum CruiserRadarMode {
 }
 pub struct Cruiser {
     targets: Vec<Target>,
-    tentative_target: TentativeTarget,
+    scan_radar: RadarState,
     index: usize,
 }
 impl Default for Cruiser {
@@ -23,11 +24,12 @@ impl Cruiser {
     pub fn new() -> Cruiser {
         Cruiser {
             targets: Vec::new(),
-            tentative_target: TentativeTarget::new(),
+            scan_radar: RadarState::default(),
             index: 0,
         }
     }
     pub fn tick(&mut self) {
+        debug!("seed: {}", seed());
         select_radio(7);
         set_radio_channel(9);
         send_class_and_position();
@@ -96,29 +98,19 @@ impl Cruiser {
         }
     }
     fn find_targets(&mut self) {
-        select_radar(1);
-        if let Some(contact) = scan() {
-            debug!("contact snr {:?}", contact.snr);
-            if contact.snr < 10.0 {
-                self.tentative_target.class = contact.class;
-                self.tentative_target.update(contact.position);
-                self.tentative_target.load_radar();
-                return;
-            }
-            self.new_target(contact.position, contact.velocity, contact.class);
-        }
-        select_radar(1);
-        set_radar_heading(radar_heading() + radar_width());
-        if current_tick() > 10 {
-            set_radar_width(TAU / 20.0);
-        } else {
-            set_radar_width(TAU / 10.0);
-        }
-        set_radar_max_distance(10000.0);
-        set_radar_min_distance(0.0);
         if self.targets.is_empty() {
             self.find_targets_alt();
         }
+        select_radar(1);
+        if let Some(contact) = scan() {
+            self.new_target(contact.position, contact.velocity, contact.class);
+            select_radar(1);
+            set_radar_min_distance(contact.position.distance(position()) + 20.0);
+        } else {
+            self.scan_radar.rotate();
+        }
+        self.scan_radar.save();
+        self.scan_radar.restore();
     }
     fn find_targets_alt(&mut self) {
         select_radar(0);
@@ -127,7 +119,7 @@ impl Cruiser {
             return;
         }
         set_radar_heading(radar_heading() - radar_width());
-        set_radar_width(TAU / 20.0);
+        set_radar_width(PI / 2.0);
         set_radar_max_distance(10000.0);
         set_radar_min_distance(0.0);
     }
@@ -165,7 +157,7 @@ impl Cruiser {
         }
         for t in &self.targets {
             let distance = t.position.distance(new_position);
-            if t.class == new_class && distance < 200.0 {
+            if t.class == new_class && distance < 100.0 {
                 return;
             }
         }
