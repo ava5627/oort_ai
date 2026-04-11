@@ -9,13 +9,9 @@ pub struct RadarState {
     rotations: usize,
 }
 impl RadarState {
-    pub fn new() -> RadarState {
+    pub fn new(heading: f64) -> RadarState {
         RadarState {
-            heading: if seed() == 12549780 {
-                0.0
-            } else {
-                PI /2.0
-            },
+            heading,
             width: PI / 2.0,
             min_distance: 0.0,
             max_distance: 1e99,
@@ -60,6 +56,6 @@ impl RadarState {
 
 impl Default for RadarState {
     fn default() -> Self {
-        Self::new()
+        Self::new(PI/2.0)
     }
 }

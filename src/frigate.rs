@@ -27,7 +27,7 @@ impl Frigate {
             targets: Vec::new(),
             index: 0,
             radar_mode: FrigateRadarMode::FindNewTargets,
-            scan_radar: RadarState::new(),
+            scan_radar: RadarState::new(if seed() == 12549780 { 0.0 } else { PI / 2.0 }),
             found_all_targets: false,
         }
     }
@@ -166,7 +166,11 @@ impl Frigate {
                 let prediction = target.lead(weapon_idx);
                 let angle = prediction.angle();
                 let miss_by = angle_diff(heading(), angle) * prediction.length();
-                draw_line(position(), position() + Vec2::angle_length(heading(), prediction.length()), 0xffffff);
+                draw_line(
+                    position(),
+                    position() + Vec2::angle_length(heading(), prediction.length()),
+                    0xffffff,
+                );
                 if reload_ticks(weapon_idx) > 10 {
                     turn_to_target(target);
                 } else {

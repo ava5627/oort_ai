@@ -51,7 +51,7 @@ impl Ship {
             current_target: None,
             update_index: 0,
             radar_mode: FrigateRadarMode::FindNewTargets,
-            scan_radar: RadarState::new(),
+            scan_radar: RadarState::default(),
             num_targets: 4,
             fired: false,
             fp: None,
