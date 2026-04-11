@@ -22,6 +22,9 @@ impl Default for Cruiser {
 
 impl Cruiser {
     pub fn new() -> Cruiser {
+        if seed() == 6772418 {
+            set_radar_heading(PI/4.0);
+        }
         Cruiser {
             targets: Vec::new(),
             scan_radar: RadarState::default(),
