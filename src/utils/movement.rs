@@ -78,13 +78,10 @@ pub fn turn_to(target_heading: f64) {
 }
 
 pub fn turn_to_target(target: &Target) {
-    let nf = target.future_positions.len();
-    if nf == 0 {
-        return;
-    }
-    let target_heading = (target.future_positions[nf - 1].0).angle();
-    let av = if nf >= 2 {
-        let last_heading = (target.future_positions[nf - 2].0).angle();
+    let lead_pos = target.lead_position.unwrap_or(target.position);
+    let target_heading = lead_pos.angle();
+    let av = if let Some(last_lead_pos) = target.last_lead_position {
+        let last_heading = last_lead_pos.angle();
         let delta_heading = angle_diff(last_heading, target_heading);
         angular_velocity() * TICK_LENGTH - delta_heading
     } else {

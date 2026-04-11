@@ -16,7 +16,7 @@ pub mod sandbox;
 use self::testing::Test;
 use oort_api::prelude::*;
 pub enum Special {
-    Test(Test),
+    Test(Box<Test>),
     Gun(guns::Ship),
     Acceleration(acceleration::Ship),
     Acceleration2(acceleration2::Ship),
@@ -40,7 +40,7 @@ impl Default for Special {
 impl Special {
     pub fn new() -> Special {
         match scenario_name() {
-            "sandbox" => Special::Test(Test::new()),
+            "sandbox" => Special::Test(Box::default()),
             "tutorial_guns" => Special::Gun(guns::Ship::new()),
             "tutorial_acceleration" => Special::Acceleration(acceleration::Ship::new()),
             "tutorial_acceleration2" => Special::Acceleration2(acceleration2::Ship::new()),

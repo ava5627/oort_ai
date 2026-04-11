@@ -33,6 +33,7 @@ impl Ship {
             self.target.update(pos, vel);
         }
         self.target.tick(0);
+        self.target.draw_path();
         let prediction = self.target.lead(0);
         let angle = prediction.angle();
         turn_to_simple(angle);

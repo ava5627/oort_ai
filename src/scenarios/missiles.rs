@@ -8,7 +8,7 @@ use crate::utils::turn_to;
 use crate::utils::VecUtils;
 
 pub enum Ship {
-    Missile(Missile),
+    Missile(Box<Missile>),
     Fighter,
 }
 
@@ -28,7 +28,7 @@ impl Ship {
             set_radar_heading(PI);
         }
         match class() {
-            Class::Missile => Ship::Missile(Missile::new()),
+            Class::Missile => Ship::Missile(Box::default()),
             Class::Fighter => Ship::Fighter,
             _ => unreachable!(),
         }

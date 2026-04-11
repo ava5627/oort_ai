@@ -15,6 +15,7 @@ use oort_api::prelude::*;
 #[derive(Clone, PartialEq)]
 pub struct Target {
     pub position: Vec2,
+    pub last_position: Vec2,
     pub velocity: Vec2,
     pub last_velocity: Vec2,
     pub acceleration: Vec2,
@@ -25,6 +26,8 @@ pub struct Target {
     pub tick_updated: u32,
     pub history: VecDeque<Vec2>,
     pub future_positions: VecDeque<(Vec2, u32)>,
+    pub lead_position: Option<Vec2>,
+    pub last_lead_position: Option<Vec2>,
     pub order: usize,
     pub color: u32,
 }
@@ -33,6 +36,7 @@ impl Target {
     pub fn new(position: Vec2, velocity: Vec2, class: Class) -> Target {
         Target {
             position,
+            last_position: position,
             velocity,
             last_velocity: velocity,
             acceleration: Vec2::zero(),
@@ -43,6 +47,8 @@ impl Target {
             tick_updated: current_tick(),
             history: VecDeque::new(),
             future_positions: VecDeque::new(),
+            lead_position: None,
+            last_lead_position: None,
             order: 3,
             color: match class {
                 Class::Fighter => 0x00ffff,
@@ -71,6 +77,7 @@ impl Target {
 
     pub fn update(&mut self, new_position: Vec2, new_velocity: Vec2) {
         let dt = (current_tick() - self.tick_updated) as f64 * TICK_LENGTH;
+        self.last_position = self.position;
         self.position = new_position;
         self.velocity = new_velocity;
         self.last_acceleration = self.acceleration;
@@ -79,7 +86,7 @@ impl Target {
             self.acceleration = Vec2::zero();
         }
         self.jerk = (self.acceleration - self.last_acceleration) / dt;
-        let ma = if seed() == 3461066 {
+        let ma = if seed() == 3461066 && class() == Class::Frigate {
             0.0
         } else {
             class_max_acceleration(self.class) / 10.0
@@ -161,6 +168,10 @@ impl Target {
             // let angle = future_position.angle();
             // let miss_by = angle_diff(angle, heading()) * future_position.length();
             if gun == 0 {
+                self.last_lead_position = self.lead_position;
+                self.lead_position = Some(future_position);
+            }
+            if gun == 1 && reload_ticks(gun) == 0 {
                 self.future_positions.push_back((
                     future_position,
                     current_tick() + (time_to_target / TICK_LENGTH) as u32,

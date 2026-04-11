@@ -1,4 +1,3 @@
-
 use crate::scenarios::sandbox::kalman_test::KalmanTest;
 
 pub struct Test {
