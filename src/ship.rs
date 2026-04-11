@@ -14,7 +14,7 @@ pub enum Ship {
     CruiserMissile(CruiserMissile),
     Cruiser(Cruiser),
     Frigate(Frigate),
-    Special(Special),
+    Special(Box<Special>),
 }
 impl Default for Ship {
     fn default() -> Self {
@@ -26,7 +26,7 @@ impl Ship {
     pub fn new() -> Ship {
         match Special::new() {
             Special::None => {}
-            special => return Ship::Special(special),
+            special => return Ship::Special(Box::new(special)),
         }
         match class() {
             Class::Fighter => Ship::Fighter(Fighter::new()),

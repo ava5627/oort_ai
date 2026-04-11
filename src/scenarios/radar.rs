@@ -44,7 +44,7 @@ impl Ship {
             debug!("prediction: {:?}", prediction);
             let angle = prediction.angle();
             debug!("angle: {}", angle);
-            turn_to_target(&target);
+            turn_to_target(target);
             let miss_by = angle_diff(heading(), angle) * prediction.length();
             draw_line(position(), position() + Vec2::angle_length(heading(), prediction.length()), 0xFF0000);
             debug!("Miss by: {}", miss_by);

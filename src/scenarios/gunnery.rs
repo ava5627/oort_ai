@@ -335,7 +335,7 @@ fn time_to_turn_to(target_heading: f64) -> f64 {
     let curr_error = angle_diff(target_heading, heading());
     let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
 
-    let accel_sign = curr_error.signum() * -1.0;
+    let accel_sign = -curr_error.signum();
     let passed = ((-(aa / 2.0 + av)
         + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
         / aa)

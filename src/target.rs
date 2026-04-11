@@ -1,4 +1,6 @@
 use std::collections::VecDeque;
+use std::fmt::Debug;
+use std::fmt::Display;
 
 use crate::utils::angle_at_distance;
 use crate::utils::bullet_speeds;
@@ -10,7 +12,7 @@ use crate::utils::gun_offsets;
 use crate::utils::VecUtils;
 use oort_api::prelude::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Target {
     pub position: Vec2,
     pub velocity: Vec2,
@@ -23,6 +25,8 @@ pub struct Target {
     pub tick_updated: u32,
     pub history: VecDeque<Vec2>,
     pub future_positions: VecDeque<(Vec2, u32)>,
+    pub order: usize,
+    pub color: u32,
 }
 
 impl Target {
@@ -39,6 +43,13 @@ impl Target {
             tick_updated: current_tick(),
             history: VecDeque::new(),
             future_positions: VecDeque::new(),
+            order: 3,
+            color: match class {
+                Class::Fighter => 0x00ffff,
+                Class::Frigate => 0xff00ff,
+                Class::Cruiser => 0x00ff00,
+                _ => 0x00ffff,
+            },
         }
     }
 
@@ -64,16 +75,20 @@ impl Target {
         self.velocity = new_velocity;
         self.last_acceleration = self.acceleration;
         self.acceleration = (self.velocity - self.last_velocity) / dt;
+        if self.order < 2 {
+            self.acceleration = Vec2::zero();
+        }
         self.jerk = (self.acceleration - self.last_acceleration) / dt;
-        let ma = if seed() == 14485900 || class() != Class::Frigate {
-            class_max_acceleration(self.class)
-        } else if seed() == 3461066 {
+        let ma = if seed() == 3461066 {
             0.0
         } else {
             class_max_acceleration(self.class) / 10.0
         };
         self.jerk.x = self.jerk.x.clamp(-ma, ma);
         self.jerk.y = self.jerk.y.clamp(-ma, ma);
+        if self.order < 3 {
+            self.jerk = Vec2::zero();
+        }
         self.last_velocity = self.velocity; // set after because velocity is changed in the tick function but we don't know if thats actually accurate
         self.tick_updated = current_tick();
     }
@@ -106,7 +121,7 @@ impl Target {
             fp.push_back(future_position);
         }
         draw_curve(&self.history, 0x00ff00, false);
-        draw_curve(&fp, 0x00ffff, false);
+        draw_curve(&fp, self.color, false);
         draw_points(&self.future_positions, 0xff0000);
     }
 
@@ -157,6 +172,40 @@ impl Target {
             draw_line(gun_position, adjusted_position, gun_color(gun));
             future_position
         }
+    }
+}
+
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.order == 1 {
+            write!(
+                f,
+                "New Target {{\n\tpos: [{:.2}, {:.2}],\n\tvel: [{:.2}, {:.2}]\n}}",
+                self.position.x, self.position.y, self.velocity.x, self.velocity.y
+            )
+        } else if self.order == 2 {
+            write!(
+                f,
+                "Updated Target {{\n\tpos: [{:.2}, {:.2}],\n\tvel: [{:.2}, {:.2}],\n\tacc: [{:.2}, {:.2}]\n}}",
+                self.position.x, self.position.y, self.velocity.x, self.velocity.y, self.acceleration.x, self.acceleration.y
+            )
+        } else {
+            write!(
+                f,
+                "Target {{\n\tpos: [{:.2}, {:.2}],\n\tvel: [{:.2}, {:.2}],\n\tacc: [{:.2}, {:.2}],\n\tjerk: [{:.2}, {:.2}]\n}}",
+                self.position.x, self.position.y, self.velocity.x, self.velocity.y, self.acceleration.x, self.acceleration.y, self.jerk.x, self.jerk.y
+            )
+        }
+    }
+}
+
+impl Debug for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Target {{ pos: {}, vel: {}, acc: {}, jerk: {}, class: {:?}, shots_fired: {}, order: {} }}",
+            self.position, self.velocity, self.acceleration, self.jerk, self.class, self.shots_fired, self.order
+        )
     }
 }
 

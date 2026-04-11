@@ -117,7 +117,7 @@ pub fn turn_to_no_stop(target_heading: f64) {
     let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
 
     // let passed = (((8.0 * target_heading / aa + 1.0).sqrt() - 1.0) / 2.0).ceil();
-    let accel_sign = curr_error.signum() * -1.0;
+    let accel_sign = -curr_error.signum();
     let passed = ((-(aa / 2.0 + av)
         + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
         / aa)
