@@ -1,6 +1,12 @@
 use oort_api::prelude::*;
 
-use crate::utils::{angle_at_distance, turn_to, turn_to_simple};
+use crate::target::Target;
+use crate::utils::angle_at_distance;
+use crate::utils::best_acceleration;
+use crate::utils::boost;
+use crate::utils::max_accelerate;
+use crate::utils::turn_to;
+use crate::utils::turn_to_simple;
 const BULLET_SPEED: f64 = 1000.0;
 pub struct Ship {
     fighter: Fighter,
@@ -52,12 +58,6 @@ impl Fighter {
         if let Some(contact) = scan() {
             if contact.class == Class::Missile {
                 set_radar_min_distance((contact.position - position()).length());
-                send([
-                    contact.position.x,
-                    contact.position.y,
-                    contact.velocity.x,
-                    contact.velocity.y,
-                ]);
                 accelerate(vec2(100.0, 0.0));
                 fire(0);
                 fire(1);
@@ -117,10 +117,8 @@ impl Fighter {
     }
 }
 pub struct Missile {
-    target_position: Vec2,
-    last_distance: Vec2,
-    target_velocity: Vec2,
-    target_acceleration: Vec2,
+    target: Option<Target>,
+    boost_time: Option<usize>,
 }
 impl Default for Missile {
     fn default() -> Self {
@@ -130,41 +128,67 @@ impl Default for Missile {
 
 impl Missile {
     pub fn new() -> Missile {
-        set_radar_heading(PI);
         Missile {
-            target_position: vec2(0.0, 0.0),
-            last_distance: vec2(0.0, 0.0),
-            target_velocity: vec2(0.0, 0.0),
-            target_acceleration: vec2(0.0, 0.0),
+            target: None,
+            boost_time: None,
         }
     }
     pub fn tick(&mut self) {
-        let (target_position, target_velocity) = if let Some(contact) = scan() {
+        debug!("position: {:?}", position());
+        let (target_position, target_velocity) = if let Some(contact) =
+            scan().filter(|c| c.class != Class::Missile && self.target.is_some())
+        {
             (contact.position, contact.velocity)
+        // } else if let Some(msg) = receive() {
+        //     debug!("received message");
+        //     (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
+        } else if let Some(contact) = scan().filter(|c| c.class != Class::Missile) {
+            (contact.position, contact.velocity)
+        } else if fuel() > 0.0 {
+            set_radar_heading(0.0);
+            // let d = position().x.abs() * 2.0;
+            // let a = angle_at_distance(d, 1000.0);
+            if position().x < -200.0 {
+                set_radar_width(TAU / 128.0);
+            } else {
+                set_radar_width(TAU / 64.0);
+            }
+            set_radar_max_distance(1e99);
+            set_radar_min_distance(0.0);
+            accelerate(vec2(100.0, 0.0));
+            return;
         } else {
             set_radar_heading(radar_heading() + radar_width());
-            set_radar_width(TAU / 4.1);
-            if let Some(msg) = receive() {
-                (vec2(msg[0], msg[1]), vec2(msg[2], msg[3]))
-            } else {
-                accelerate(vec2(100.0, 0.0).rotate(heading()));
-                return;
-            }
+            set_radar_width(TAU / 4.0);
+            set_radar_max_distance(1e99);
+            set_radar_min_distance(0.0);
+            return;
         };
         set_radar_heading((target_position - position()).angle());
         set_radar_width(angle_at_distance(
             position().distance(target_position),
-            100.0,
+            200.0,
         ));
-        set_radar_min_distance(position().distance(target_position) - 100.0);
-        set_radar_max_distance(position().distance(target_position) + 100.0);
-        self.target_acceleration = (target_velocity - self.target_velocity) / TICK_LENGTH;
-        self.target_velocity = target_velocity;
-        self.target_position = target_position;
-        self.seek();
-        if angle_diff((self.target_position - position()).angle(), heading()).abs() < 0.5 {
-            activate_ability(Ability::Boost);
+        set_radar_min_distance(position().distance(target_position) - 200.0);
+        set_radar_max_distance(position().distance(target_position) + 200.0);
+        if let Some(target) = &mut self.target {
+            if target_position.distance(target.position) < 200.0 {
+                target.update(target_position, target_velocity);
+            } else {
+                self.target = Some(Target::new(
+                    target_position,
+                    target_velocity,
+                    Class::Missile,
+                ));
+            }
+        } else {
+            self.target = Some(Target::new(
+                target_position,
+                target_velocity,
+                Class::Missile,
+            ));
         }
+        self.seek_target();
         if fuel() <= 0.0 {
             set_radar_heading(velocity().angle());
             set_radar_min_distance(0.0);
@@ -172,23 +196,26 @@ impl Missile {
             set_radar_width(TAU / 20.0);
         }
     }
-    pub fn seek(&mut self) {
-        let dp = self.target_position - position();
-        let dv = self.target_velocity - velocity();
+    pub fn seek_target(&mut self) {
+        let target = if let Some(target) = &self.target {
+            target
+        } else {
+            return;
+        };
+        let dp = target.position - position();
+        let dv = target.velocity - velocity();
         let closing_speed = -(dp.y * dv.y - dp.x * dv.x).abs() / dp.length();
         let los = dp.angle();
         let los_rate = (dp.y * dv.x - dp.x * dv.y) / dp.length().powf(2.0);
         const N: f64 = 4.0;
-        let nt = self.target_acceleration
-            - (self.target_acceleration.dot(dp) / dp.length().powf(2.0)) * dp;
-        debug!("nt: {}", nt);
-        debug!("nt.length(): {}", nt.length());
-        debug!("taccel.length(): {}", self.target_acceleration.length());
-        debug!("los_rate: {}", los_rate);
+        let nt = target.acceleration - (target.acceleration.dot(dp) / dp.length().powf(2.0)) * dp;
         let accel = N * closing_speed * los_rate + N * nt.length() / 2.0 * los_rate;
         let a = vec2(100.0, accel).rotate(los);
-        let a = vec2(400.0, 0.0).rotate(a.angle());
-        accelerate(a);
+        let target_angle = a.angle();
+        let ma = best_acceleration(dp.angle());
+        let angle = ma.angle();
+        max_accelerate(vec2(ma.x, -ma.y).rotate(target_angle + angle));
+        turn_to(target_angle + angle);
         if dp.length() > 300.0 && fuel() > 0.0 {
             turn_to_simple(a.angle());
         } else {
@@ -197,7 +224,9 @@ impl Missile {
         if dp.length() < 300.0 {
             explode();
         }
-        self.last_distance = dp;
+        let error = angle_diff(heading(), dp.angle()).abs();
+        let should_boost = error < 2.0 && fuel() > 0.0;
+        boost(should_boost, &mut self.boost_time);
     }
 }
 
