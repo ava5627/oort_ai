@@ -110,22 +110,25 @@ pub fn turn_to_target(target: &Target) {
 
 pub fn turn_to_no_stop(target_heading: f64) {
     let av = angular_velocity() * TICK_LENGTH;
-    let curr_error = angle_diff(target_heading, heading());
-    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+    let curr_error = angle_diff(heading(), target_heading);
+    let accel_sign = curr_error.signum();
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH * accel_sign;
 
-    // let passed = (((8.0 * target_heading / aa + 1.0).sqrt() - 1.0) / 2.0).ceil();
-    let accel_sign = -curr_error.signum();
     let passed = ((-(aa / 2.0 + av)
-        + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
+        + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error).sqrt() * accel_sign)
         / aa)
-        .ceil()
-        .abs();
-    let heading_when_stopped =
-        heading() + av * passed + aa * accel_sign * (passed.powi(2) + passed) / 2.0;
+        .ceil();
+    let heading_when_stopped = heading() + av * passed + aa * (passed.powi(2) + passed) / 2.0;
+    draw_line(
+        position(),
+        position() + vec2(20000.0, 0.0).rotate(heading_when_stopped),
+        0xFF00FF,
+    );
     let error = angle_diff(target_heading, heading_when_stopped).abs();
     let error_per_tick = error * 2.0 / (passed.powi(2) + passed);
     let accel =
         (max_angular_acceleration() - error_per_tick / TICK_LENGTH / TICK_LENGTH) * accel_sign;
+    debug!("torque: {}", accel);
     torque(accel);
 }
 pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {

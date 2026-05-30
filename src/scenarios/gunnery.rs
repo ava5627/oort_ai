@@ -10,6 +10,7 @@ pub struct TargetState {
     predicted_position: Option<Vec2>,
     shots_fired: usize,
     observations: usize,
+    last_shot_position: Option<Vec2>,
 }
 impl TargetState {
     fn load_radar(&self) {
@@ -18,6 +19,18 @@ impl TargetState {
         set_radar_width(angle_at_distance(dp.length(), 20.0));
         set_radar_max_distance(dp.length() + 20.0);
         set_radar_min_distance(dp.length() - 20.0);
+    }
+
+    fn draw(&self, index: usize) {
+        draw_polygon(self.position, 50.0, 8, 0.0, 0xffffff);
+        draw_square(self.position, 10.0, 0xffffff);
+        draw_text!(self.position, 0xffffff, "{:?}", index);
+        if let Some(last_shot_position) = self.last_shot_position {
+            draw_triangle(last_shot_position, 50.0, 0xff0000);
+            draw_triangle(last_shot_position, 10.0, 0xff0000);
+            draw_line(last_shot_position, self.position, 0xff0000);
+            draw_line(position(), last_shot_position, 0xff0000);
+        }
     }
 }
 
@@ -73,18 +86,8 @@ impl Ship {
         } else if self.radar_mode == FrigateRadarMode::UpdateTargets {
             self.update_targets();
         }
-        if self.targets.len() == 4 {
-            if let Some(f) = self.fp {
-                draw_triangle(f + position(), 150.0, 0xffffff);
-                draw_triangle(f + position(), 10.0, 0xffffff);
-            }
-        }
         self.aim_and_fire();
         debug!("reload_ticks: {}", reload_ticks(0));
-        for p in &self.shot_positions {
-            draw_triangle(*p, 50.0, 0xff00ff);
-            draw_triangle(*p, 10.0, 0xff00ff);
-        }
     }
     fn update(&mut self) {
         if self.num_targets == 0 {
@@ -92,9 +95,8 @@ impl Ship {
         }
         for (i, t) in self.targets.iter_mut().enumerate() {
             t.position += t.velocity * TICK_LENGTH;
-            draw_polygon(t.position, 50.0, 8, 0.0, 0xffffff);
-            draw_square(t.position, 10.0, 0xffffff);
-            draw_text!(t.position, 0xffffff, "{:?}", i);
+            t.draw(i);
+            lead_target(t.position, t.velocity, 4000.0);
         }
         let mut too_close = None;
         for (i, t) in self.targets.iter().enumerate() {
@@ -174,6 +176,7 @@ impl Ship {
             shots_fired: 0,
             observations: 1,
             predicted_position: None,
+            last_shot_position: None,
         };
         self.targets.push(t);
         self.num_targets = self.targets.len().max(self.num_targets);
@@ -195,6 +198,7 @@ impl Ship {
             };
             self.fp = Some(fp);
             draw_triangle(fp + position(), 150.0, 0xff0000);
+            draw_triangle(fp + position(), 10.0, 0xff0000);
             draw_line(position(), fp + position(), 0xff0000);
             draw_line(
                 position(),
@@ -205,6 +209,7 @@ impl Ship {
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
                 self.targets[0].shots_fired += 1;
+                self.targets[0].last_shot_position = Some(fp + position());
                 self.num_targets -= 1;
                 self.fired = true;
             }
@@ -243,7 +248,8 @@ impl Ship {
             fire(0);
             self.shot_positions.push(future_position + position());
             self.current_target = None;
-            self.targets[idx].shots_fired += 1;
+            target.last_shot_position = Some(future_position + position());
+            target.shots_fired += 1;
             if self.num_targets > 0 {
                 self.num_targets -= 1;
             }
@@ -294,6 +300,7 @@ impl Ship {
             let delta = new_future_position.distance(future_position);
             future_position = new_future_position;
             if delta < 1e-3 {
+                debug!("turn time: {}", turn_time / TICK_LENGTH);
                 break;
             }
         }
@@ -332,15 +339,14 @@ fn turn_to_target(target: &mut TargetState) {
 
 fn time_to_turn_to(target_heading: f64) -> f64 {
     let av = angular_velocity() * TICK_LENGTH;
-    let curr_error = angle_diff(target_heading, heading());
-    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH;
+    let curr_error = angle_diff(heading(), target_heading);
+    let accel_sign = curr_error.signum();
+    let aa = max_angular_acceleration() * TICK_LENGTH * TICK_LENGTH * accel_sign;
 
-    let accel_sign = -curr_error.signum();
     let passed = ((-(aa / 2.0 + av)
-        + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error.abs()).sqrt() * accel_sign)
+        + ((aa / 2.0 + av).powi(2) + 2.0 * aa * curr_error).sqrt() * accel_sign)
         / aa)
-        .ceil()
-        .abs();
+        .ceil();
     passed * TICK_LENGTH
 }
 fn lead_target(target_position: Vec2, target_velocity: Vec2, bullet_speed: f64) -> (f64, Vec2) {
