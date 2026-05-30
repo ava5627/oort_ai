@@ -46,7 +46,6 @@ pub struct Ship {
     update_index: usize,
     radar_mode: FrigateRadarMode,
     scan_radar: RadarState,
-    num_targets: usize,
     fired: bool,
     fp: Option<Vec2>,
     shot_positions: Vec<Vec2>,
@@ -65,7 +64,6 @@ impl Ship {
             update_index: 0,
             radar_mode: FrigateRadarMode::FindNewTargets,
             scan_radar: RadarState::default(),
-            num_targets: 4,
             fired: false,
             fp: None,
             shot_positions: Vec::new(),
@@ -76,12 +74,7 @@ impl Ship {
             set_radar_heading(349.0 * PI / 180.0);
         }
         self.update();
-        if self.num_targets == 0 {
-            torque(max_angular_acceleration());
-            set_radar_heading(radar_heading() + radar_width() / 2.0);
-            self.scan_radar.set_width(TAU / 4.0);
-            return;
-        } else if self.radar_mode == FrigateRadarMode::FindNewTargets {
+        if self.radar_mode == FrigateRadarMode::FindNewTargets {
             self.find_targets();
         } else if self.radar_mode == FrigateRadarMode::UpdateTargets {
             self.update_targets();
@@ -90,9 +83,6 @@ impl Ship {
         debug!("reload_ticks: {}", reload_ticks(0));
     }
     fn update(&mut self) {
-        if self.num_targets == 0 {
-            return;
-        }
         for (i, t) in self.targets.iter_mut().enumerate() {
             t.position += t.velocity * TICK_LENGTH;
             t.draw(i);
@@ -151,7 +141,7 @@ impl Ship {
             new_heading = top_angle;
         }
         set_radar_heading(new_heading);
-        self.scan_radar.set_width(TAU / 360.0);
+        self.scan_radar.set_width(TAU / 300.0);
         self.scan_radar.save();
         if !self.targets.is_empty() {
             self.targets[0].load_radar();
@@ -179,7 +169,6 @@ impl Ship {
             last_shot_position: None,
         };
         self.targets.push(t);
-        self.num_targets = self.targets.len().max(self.num_targets);
         true
     }
     fn aim_and_fire(&mut self) {
@@ -205,13 +194,44 @@ impl Ship {
                 position() + Vec2::angle_length(heading(), fp.length()),
                 0x00ff00,
             );
-            turn_to_no_stop((fp).angle() - 0.0005);
+            let mut double_shot = None;
+            for (i, t) in self.targets.iter().enumerate() {
+                let x = t.position.x;
+                // find the y of the bullet at the x of the target
+                let angle = angle_diff((fp).angle(), 0.0);
+                let bullet_y = position().y - (position().x - x).abs() * angle.tan();
+                // find time to reach the x of the target
+                let turn_time = if angle_diff((fp).angle(), heading()) < 0.001 {
+                    0.0
+                } else {
+                    time_to_turn_to((fp).angle())
+                };
+                let time_to_x = vec2(x, bullet_y).distance(position()) / 4000.0 + turn_time;
+                // find the y of the target at that time
+                let target_y = t.position.y + t.velocity.y * time_to_x;
+                // if the bullet is within 20 units of the target, draw a green line,
+                debug!("Double shot {i} off by {}", bullet_y - target_y);
+                if (bullet_y - target_y).abs() < 10.0 {
+                    draw_polygon(vec2(x, bullet_y), 100.0, 6, 0.0, 0x00ff00);
+                    double_shot = Some(i);
+                }
+            }
+            let offset = if let Some(i) = double_shot {
+                debug!("Double shot at target {}", i);
+                -0.0005
+            } else {
+                0.0005
+            };
+            debug!("Turning to {} with offset {}", (fp).angle(), offset);
+            turn_to_no_stop((fp).angle() + offset);
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
-                self.targets[0].shots_fired += 1;
+                self.targets[0].shots_fired += 2;
                 self.targets[0].last_shot_position = Some(fp + position());
-                self.num_targets -= 1;
                 self.fired = true;
+                if let Some(double_shot) = double_shot {
+                    self.targets[double_shot].shots_fired += 1;
+                }
             }
             return;
         }
@@ -249,10 +269,7 @@ impl Ship {
             self.shot_positions.push(future_position + position());
             self.current_target = None;
             target.last_shot_position = Some(future_position + position());
-            target.shots_fired += 1;
-            if self.num_targets > 0 {
-                self.num_targets -= 1;
-            }
+            target.shots_fired += 2;
         }
     }
     fn update_targets(&mut self) {
