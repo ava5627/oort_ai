@@ -86,7 +86,7 @@ impl Ship {
         for (i, t) in self.targets.iter_mut().enumerate() {
             t.position += t.velocity * TICK_LENGTH;
             t.draw(i);
-            lead_target(t.position, t.velocity, 4000.0);
+            t.predicted_position = Some(lead_target(t.position, t.velocity, 4001.0).1);
         }
         let mut too_close = None;
         for (i, t) in self.targets.iter().enumerate() {
@@ -210,27 +210,29 @@ impl Ship {
                 // find the y of the target at that time
                 let target_y = t.position.y + t.velocity.y * time_to_x;
                 // if the bullet is within 20 units of the target, draw a green line,
-                debug!("Double shot {i} off by {}", bullet_y - target_y);
                 if (bullet_y - target_y).abs() < 10.0 {
-                    draw_polygon(vec2(x, bullet_y), 100.0, 6, 0.0, 0x00ff00);
-                    double_shot = Some(i);
+                    let shot_position = vec2(x, bullet_y);
+                    draw_polygon(vec2(x, bullet_y), 20.0, 6, 0.0, 0x00ff00);
+                    double_shot = Some((i, shot_position));
                 }
             }
-            let offset = if let Some(i) = double_shot {
-                debug!("Double shot at target {}", i);
+            let offset = if let Some((i, _)) = double_shot {
+                if i != 0 {
+                    debug!("Double shot at target {}", i);
+                }
                 -0.0005
             } else {
                 0.0005
             };
-            debug!("Turning to {} with offset {}", (fp).angle(), offset);
             turn_to_no_stop((fp).angle() + offset);
             if angle_diff((fp).angle(), heading()).abs() < 0.001 && reload_ticks(0) == 0 {
                 fire(0);
                 self.targets[0].shots_fired += 2;
                 self.targets[0].last_shot_position = Some(fp + position());
                 self.fired = true;
-                if let Some(double_shot) = double_shot {
+                if let Some((double_shot, shot_position)) = double_shot {
                     self.targets[double_shot].shots_fired += 1;
+                    self.targets[double_shot].last_shot_position = Some(shot_position);
                 }
             }
             return;
@@ -247,9 +249,11 @@ impl Ship {
                 .iter()
                 .enumerate()
                 .min_by(|(_, a), (_, b)| {
-                    a.shots_fired
-                        .cmp(&b.shots_fired)
-                        .then(a.velocity.partial_cmp(&b.velocity).unwrap().reverse())
+                    a.shots_fired.cmp(&b.shots_fired).then(
+                        time_to_turn_to(a.predicted_position.unwrap().angle())
+                            .partial_cmp(&time_to_turn_to(b.predicted_position.unwrap().angle()))
+                            .unwrap(),
+                    )
                 })
                 .unwrap()
                 .0;
@@ -261,6 +265,12 @@ impl Ship {
         let (target_heading, future_position) =
             lead_target(target.position, target.velocity, 4000.0);
         target.predicted_position = Some(future_position + position());
+        let actual_target = vec2(future_position.length(), 0.0).rotate(heading()) + position();
+        draw_polygon(future_position + position(), 100.0, 6, 0.0, 0xffffff);
+        draw_polygon(future_position + position(), 10.0, 6, 0.0, 0xffffff);
+        draw_triangle(actual_target, 100.0, 0x00ff00);
+        draw_line(position(), actual_target, 0x00ff00);
+        draw_line(position(), future_position + position(), 0xffffff);
         turn_to_target(target);
         let error = angle_diff(target_heading, heading());
         let miss_by = 2.0 * future_position.length() * error.sin();
@@ -317,7 +327,6 @@ impl Ship {
             let delta = new_future_position.distance(future_position);
             future_position = new_future_position;
             if delta < 1e-3 {
-                debug!("turn time: {}", turn_time / TICK_LENGTH);
                 break;
             }
         }
@@ -380,12 +389,5 @@ fn lead_target(target_position: Vec2, target_velocity: Vec2, bullet_speed: f64) 
             break;
         }
     }
-    let real_future_position = future_position + position();
-    draw_triangle(real_future_position, 10.0, 0xffffff);
-    draw_triangle(real_future_position, 100.0, 0xffffff);
-    draw_line(position(), real_future_position, 0xffffff);
-    let actual_target = vec2(future_position.length() * 100., 0.0).rotate(heading()) + position();
-    draw_line(position(), actual_target, 0x00ff00);
-    draw_triangle(actual_target, 100.0, 0x00ff00);
     (future_position.angle(), future_position)
 }

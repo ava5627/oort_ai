@@ -119,16 +119,10 @@ pub fn turn_to_no_stop(target_heading: f64) {
         / aa)
         .ceil();
     let heading_when_stopped = heading() + av * passed + aa * (passed.powi(2) + passed) / 2.0;
-    draw_line(
-        position(),
-        position() + vec2(20000.0, 0.0).rotate(heading_when_stopped),
-        0xFF00FF,
-    );
     let error = angle_diff(target_heading, heading_when_stopped).abs();
     let error_per_tick = error * 2.0 / (passed.powi(2) + passed);
     let accel =
         (max_angular_acceleration() - error_per_tick / TICK_LENGTH / TICK_LENGTH) * accel_sign;
-    debug!("torque: {}", accel);
     torque(accel);
 }
 pub fn angle_at_distance(distance: f64, target_width: f64) -> f64 {
