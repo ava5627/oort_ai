@@ -208,12 +208,32 @@ impl Ship {
                 };
                 let time_to_x = vec2(x, bullet_y).distance(position()) / 4000.0 + turn_time;
                 // find the y of the target at that time
-                let target_y = t.position.y + t.velocity.y * time_to_x;
+                let target_position = t.position + t.velocity * time_to_x;
+                let dist = target_position.distance(fp + position());
+                let error = (bullet_y - target_position.y).abs();
+
+                let impact_position = (fp).rotate(-0.0005).normalize()
+                    * target_position.distance(position())
+                    + position();
+                let deflect_up = Vec2::angle_length((fp).angle() + 0.1, dist);
+                let deflect_down = Vec2::angle_length((fp).angle() - 0.1, dist);
+                let deflect_range = deflect_up.distance(deflect_down);
+                let hit_chance = 20.0 / deflect_range;
                 // if the bullet is within 20 units of the target, draw a green line,
-                if (bullet_y - target_y).abs() < 10.0 {
-                    let shot_position = vec2(x, bullet_y);
-                    draw_polygon(vec2(x, bullet_y), 20.0, 6, 0.0, 0x00ff00);
-                    double_shot = Some((i, shot_position));
+                if error < 10.0 {
+                    double_shot = Some((i, impact_position));
+                    if i != 0 {
+                        debug!(
+                            "Target {} is within range for a double shot! (error: {:.3}, dist: {:.2})",
+                            i, error, dist
+                        );
+                        draw_polygon(target_position, 20.0, 6, 0.0, 0x00ff00);
+                        debug!("Deflect range for target {}: {:.3}", i, deflect_range);
+                        debug!("Hit chance for target {}: {:.2}%", i, hit_chance * 100.0);
+                        draw_line(impact_position, impact_position + deflect_up, 0x00ff00);
+                        draw_line(impact_position, impact_position + deflect_down, 0x00ff00);
+                        draw_polygon(fp + position(), 20.0, 4, 0.0, 0x00ffff);
+                    }
                 }
             }
             let offset = if let Some((i, _)) = double_shot {
