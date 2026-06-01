@@ -21,7 +21,7 @@ impl RadarState {
     }
 
     pub fn rotate(&mut self) {
-        if self.rotations >= self.turns * 4 {
+        if self.rotations >= 2_usize.pow(self.turns as u32 - 1) * 4 {
             self.rotations = 0;
             self.turns += 1;
             self.width /= 2.0;
